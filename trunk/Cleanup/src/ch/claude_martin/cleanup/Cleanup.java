@@ -1,11 +1,14 @@
 package ch.claude_martin.cleanup;
 
+import java.io.Closeable;
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -73,5 +76,25 @@ public interface Cleanup {
       throw new IllegalArgumentException("'value' must not be of synthetic class!");
 
     CleanupDaemon.registerCleanup(this, cleanup, value);
+  }
+
+  /**
+   * Easy registration of auto-closeable resources.
+   * 
+   * @param value
+   *          auto-closeable resources.
+   */
+  public default <V extends AutoCloseable> void registerAutoClose(
+      @SuppressWarnings("unchecked") V... values) {
+    if (values == null || Arrays.asList(values).contains(null))
+      throw new NullPointerException("values");
+    this.registerCleanup((_values) -> {
+      for (V v : _values)
+        try {
+          v.close();
+        } catch (Exception e) {
+          CleanupDaemon.handle(e);
+        }
+    }, values);
   }
 }
