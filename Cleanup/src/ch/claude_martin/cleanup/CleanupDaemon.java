@@ -27,9 +27,8 @@ final class CleanupDaemon implements Runnable {
    * {@link RuntimeException}: thrown when the {@link CleanupPhantomRef#finalizer} throws it.
    * 
    */
-  private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = new AtomicReference<>(
-      (t) -> {
-      });
+  private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
+      new AtomicReference<>((t) -> {  });
 
   /** @see Cleanup#addExceptionHandler(Consumer) */
   static void addExceptionHandler(Consumer<Throwable> handler) {
@@ -38,6 +37,10 @@ final class CleanupDaemon implements Runnable {
 
   static ReferenceQueue<Cleanup> getQueue() {
     return QUEUE;
+  }
+  
+  static void handle(Throwable t) {
+    EXCEPTION_HANDLER.get().accept(t);
   }
 
   /** @see Cleanup#registerCleanup(Consumer, Object) */
