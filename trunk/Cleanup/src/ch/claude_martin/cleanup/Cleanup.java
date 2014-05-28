@@ -80,8 +80,11 @@ public interface Cleanup {
 
   /**
    * Easy registration of auto-closeable resources.
+   * <p>
+   * The resources are closed as they are listed, from first to last. Therefore you should list them
+   * in the <em>opposite</em> order of their creation.
    * 
-   * @param value
+   * @param values
    *          auto-closeable resources.
    */
   public default <V extends AutoCloseable> void registerAutoClose(
