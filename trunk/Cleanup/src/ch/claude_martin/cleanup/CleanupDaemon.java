@@ -13,11 +13,14 @@ final class CleanupDaemon implements Runnable {
   CleanupDaemon() {
     super();
   }
-
+  /** The ReferenceQueue for all PhantomReferences. */
   private static final ReferenceQueue<?> QUEUE = new ReferenceQueue<>();
+  /** The PhantomReferences, so that they do not get removed before their object is removed. */
   private static final Map<CleanupPhantomRef<?, ?>, WeakReference<?>> REFS = new IdentityHashMap<>();
   /**
-   * A handler for all exceptions that occur.
+   * A handler for all exceptions that occur. 
+   * The consumer can be linked to more consumers/handlers.
+   * 
    * <p>
    * {@link InterruptedException}: thrown when the {@link #THREAD thread} is interrupted. The thread
    * will continue, unless this handler throws a {@link RuntimeException}.
@@ -34,10 +37,12 @@ final class CleanupDaemon implements Runnable {
     EXCEPTION_HANDLER.getAndAccumulate(handler, Consumer::andThen);
   }
 
+  /** The ReferenceQueue for all PhantomReferences. */
   static ReferenceQueue<?> getQueue() {
     return QUEUE;
   }
 
+  /** Handle any exception by all registered handlers. */
   static void handle(final Throwable t) {
     EXCEPTION_HANDLER.get().accept(t);
   }
@@ -50,6 +55,7 @@ final class CleanupDaemon implements Runnable {
     }
   }
 
+  /** Checks if value could hold a reference to obj. */
   private static <V> void check(final Object obj, final V value) {
     if (value == obj)
       throw new IllegalArgumentException("'value' must not be the object itself!");
@@ -67,7 +73,7 @@ final class CleanupDaemon implements Runnable {
    * The thread, which will run the cleanup-code.
    */
   static final Thread THREAD = new Thread(new CleanupDaemon());
-  static {
+  static { // this is only run if and when this class is loaded.
     synchronized (THREAD) {
       THREAD.setName(Cleanup.class.getName() + "-Daemon");
       THREAD.setDaemon(true);
@@ -86,12 +92,12 @@ final class CleanupDaemon implements Runnable {
         final Reference<?> ref = QUEUE.remove();
         if (ref instanceof CleanupPhantomRef) {
           synchronized (REFS) {
-            ((CleanupPhantomRef<?, ?>) ref).runCleanup();
             REFS.remove(ref);
+            ((CleanupPhantomRef<?, ?>) ref).runCleanup();
           }
         }
       } catch (final Throwable e) {
-        EXCEPTION_HANDLER.get().accept(e);
+        handle(e);
       }
     }
   }
