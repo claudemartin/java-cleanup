@@ -4,6 +4,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -15,7 +16,7 @@ final class CleanupDaemon implements Runnable {
   }
 
   private static final ReferenceQueue<Cleanup> QUEUE = new ReferenceQueue<>();
-  private static final Map<CleanupPhantomRef<?, ?>, WeakReference<Cleanup>> REFS = new IdentityHashMap<>();
+  private static final Map<CleanupPhantomRef<?, ?>, WeakReference<?>> REFS = new IdentityHashMap<>();
   /**
    * A handler for all exceptions that occur.
    * <p>
@@ -43,10 +44,24 @@ final class CleanupDaemon implements Runnable {
   }
 
   /** @see Cleanup#registerCleanup(Consumer, Object) */
-  static <T extends Cleanup, V> void registerCleanup(T $this, Consumer<V> cleanup, V value) {
+  static <V> void registerCleanup(Object obj, Consumer<V> cleanup, V value) {
+    check(obj, value);
     synchronized (REFS) {
-      REFS.put(new CleanupPhantomRef<>($this, cleanup, value), new WeakReference<>($this));
+      REFS.put(new CleanupPhantomRef<>(obj, cleanup, value), new WeakReference<>(obj));
     }
+  }
+  
+  private static <V> void check(Object obj, V value) {
+    if (value == obj)
+      throw new IllegalArgumentException("'value' must not be the object itself!");
+    Class<? extends Object> type = value.getClass();
+    boolean isInnerClass = type.getEnclosingClass() == obj.getClass();
+    if (type.isAnonymousClass() && isInnerClass)
+      throw new IllegalArgumentException("'value' must not be of anonymous class!");
+    if (!Modifier.isStatic(type.getModifiers()) && isInnerClass)
+      throw new IllegalArgumentException("'value' must not be of inner class!");
+    if (type.isSynthetic())
+      throw new IllegalArgumentException("'value' must not be of synthetic class!");
   }
 
   /**

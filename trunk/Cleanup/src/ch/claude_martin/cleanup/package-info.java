@@ -6,7 +6,10 @@
  * lambdas and there use of a "Finalizer Guardian" is probably more convenient.
  * 
  * <p>
- * Projekt Home: <a href="https://code.google.com/p/java-cleanup/">https://code.google.com/p/java-cleanup/</a>
+ * Projekt Home: 
+ * <a href="https://code.google.com/p/java-cleanup/">https://code.google.com/p/java-cleanup/</a>
+ * |
+ * <a href="http://claude-martin.ch/java-cleanup/">http://claude-martin.ch/java-cleanup/</a>
  * 
  * <p>I provide this code as is, with no guarantees. The MIT license follows: 
  * 

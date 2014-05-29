@@ -4,7 +4,7 @@
     <tstamp>
        <format property="TIME" pattern="yyyy-MM-dd-HH-mm-ss" locale="en,GB"/>
     </tstamp>
-    <jar jarfile="build/${ant.project.name}.jar" basedir="bin">
+    <jar jarfile="build/cleanup.jar" basedir="bin">
       <exclude name="**Test.class" />
       <manifest>
         <attribute name="Manifest-Version" value="1.0" />
