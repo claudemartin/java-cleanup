@@ -27,10 +27,15 @@ import com.sun.javafx.geom.transform.Identity;
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
  * <p>
- * <style type="text/css"> table { width: 100%; } td.pro { width: 40%; } ul.pro, ul.con {
- * list-style: none; padding-left: 0; margin-left: 0; } ul.pro li, ul.con li { padding-left: 1.5em;
- * text-indent: -1.5em; } ul.pro li::before { content: "➕"; padding-right: 0.5em; } ul.con
- * li::before { content: "➖"; padding-right: 0.5em; } </style>
+ * <style type="text/css"> 
+ *   table { width: 100%; } 
+ *   td.pro { width: 40%; } 
+ *   ul.pro, ul.con {
+ *   list-style: none; padding-left: 0; margin-left: 0; } 
+ *   ul.pro li, ul.con li { padding-left: 1.5em;text-indent: -1.5em; } 
+ *   ul.pro li::before { content: "➕"; padding-right: 0.5em; } 
+ *   ul.con li::before { content: "➖"; padding-right: 0.5em; } 
+ * </style>
  * 
  * Pros and Cons and Pitfalls:
  * <table summary="List of pros and cons of this code.">
@@ -59,7 +64,6 @@ import com.sun.javafx.geom.transform.Identity;
  * </td>
  * </tr>
  * </table>
- * 
  * 
  * @author Claude Martin
  *
@@ -104,17 +108,6 @@ public interface Cleanup {
    *           thrown if value is obviously holding a reference to <i>this</i>
    */
   public default <V> void registerCleanup(Consumer<V> cleanup, V value) {
-    if (value == this)
-      throw new IllegalArgumentException("'value' must not be 'this'!");
-    Class<? extends Object> type = value.getClass();
-    boolean isInnerClass = type.getEnclosingClass() == this.getClass();
-    if (type.isAnonymousClass() && isInnerClass)
-      throw new IllegalArgumentException("'value' must not be of anonymous class!");
-    if (!Modifier.isStatic(type.getModifiers()) && isInnerClass)
-      throw new IllegalArgumentException("'value' must not be of inner class!");
-    if (type.isSynthetic())
-      throw new IllegalArgumentException("'value' must not be of synthetic class!");
-
     CleanupDaemon.registerCleanup(this, cleanup, value);
   }
 
@@ -124,20 +117,52 @@ public interface Cleanup {
    * The resources are closed as they are listed, from first to last. Therefore you should list them
    * in the <em>opposite</em> order of their creation.
    * 
-   * @param values
+   * @param resources
    *          auto-closeable resources.
    */
   public default <V extends AutoCloseable> void registerAutoClose(
-      @SuppressWarnings("unchecked") V... values) {
-    if (values == null || Arrays.asList(values).contains(null))
+      @SuppressWarnings("unchecked") V... resources) {
+    registerAutoClose(this, resources);
+  }
+
+  /**
+   * Register any object and a value for cleanup. See the non-static method for more information.
+   * 
+   * @see #registerCleanup(Consumer, Object)
+   * @param object
+   *          object for which a {@link PhantomReference} will be created
+   * @param cleanup
+   *          A consumer to clean up the value
+   * @param value
+   *          All data needed for cleanup
+   * @throws IllegalArgumentException
+   *           thrown if value is obviously holding a reference to <i>this</i>
+   */
+  public static <V> void registerCleanup(Object object, Consumer<V> cleanup, V value) {
+    CleanupDaemon.registerCleanup(object, cleanup, value);
+  }
+
+  /**
+   * Register any object and its resources for cleanup. See the non-static method for more
+   * information.
+   * 
+   * @see #registerAutoClose(AutoCloseable...)
+   * @param object
+   *          object for which a {@link PhantomReference} will be created
+   * @param resources
+   *          auto-closeable resources.
+   */
+  public static <R extends AutoCloseable> void registerAutoClose(Object object,
+      @SuppressWarnings("unchecked") R... resources) {
+    if (resources == null || Arrays.asList(resources).contains(null))
       throw new NullPointerException("values");
-    this.registerCleanup((_values) -> {
-      for (V v : _values)
+    registerCleanup(object, (res) -> {
+      for (R v : res)
         try {
           v.close();
         } catch (Exception e) {
           CleanupDaemon.handle(e);
         }
-    }, values);
+    }, resources);
   }
 }

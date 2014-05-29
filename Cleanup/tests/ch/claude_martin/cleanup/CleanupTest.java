@@ -115,6 +115,16 @@ public class CleanupTest {
     test.registerCleanup((v) -> {
     }, new byte[10]);
   }
+  
+  @Test
+  public final void testStatic() {
+    Object test = new String("test");
+    AtomicBoolean result = new AtomicBoolean(false);
+    Cleanup.registerCleanup(test, (v) -> { result.set(true); }, new byte[10]);
+    test = null;
+    gc();
+    assertTrue(result.get());
+  }
 
   @Test
   public final void testParallel() throws InterruptedException {
@@ -139,6 +149,7 @@ public class CleanupTest {
     }
     pool.shutdown();
     pool.awaitTermination(10, TimeUnit.MINUTES);
+    gc();
     Thread.sleep(100);
     assertTrue(result.get());
   }
