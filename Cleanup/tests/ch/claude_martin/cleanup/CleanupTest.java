@@ -53,7 +53,7 @@ public class CleanupTest {
   @Test
   public final void testCleanup() {
     final int answer = 42;
-    AtomicInteger i = new AtomicInteger(0);
+    final AtomicInteger i = new AtomicInteger(0);
     {
       MyFinalizable test = new MyFinalizable();
       test.registerCleanup((v) -> {
@@ -75,7 +75,7 @@ public class CleanupTest {
 
   @Test
   public final void testTwice() {
-    AtomicInteger i = new AtomicInteger(0);
+    final AtomicInteger i = new AtomicInteger(0);
     MyFinalizable test = new MyFinalizable();
     test.registerCleanup((v) -> {
       i.incrementAndGet();
@@ -90,36 +90,36 @@ public class CleanupTest {
 
   @Test(expected = IllegalArgumentException.class)
   public final void testThis() {
-    MyFinalizable test = new MyFinalizable();
+    final MyFinalizable test = new MyFinalizable();
     test.registerCleanup((v) -> {
     }, test);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public final void testAnonymous() {
-    MyFinalizable test = new MyFinalizable();
+    final MyFinalizable test = new MyFinalizable();
     test.registerCleanup((v) -> {
     }, test.getAnonymous());
   }
 
   @Test(expected = IllegalArgumentException.class)
   public final void testLambda() {
-    MyFinalizable test = new MyFinalizable();
+    final MyFinalizable test = new MyFinalizable();
     test.registerCleanup((v) -> {
     }, Function.identity());
   }
 
   @Test
   public final void testArray() {
-    MyFinalizable test = new MyFinalizable();
+    final MyFinalizable test = new MyFinalizable();
     test.registerCleanup((v) -> {
     }, new byte[10]);
   }
-  
+
   @Test
   public final void testStatic() {
     Object test = new String("test");
-    AtomicBoolean result = new AtomicBoolean(false);
+    final AtomicBoolean result = new AtomicBoolean(false);
     Cleanup.registerCleanup(test, (v) -> { result.set(true); }, new byte[10]);
     test = null;
     gc();
@@ -128,9 +128,9 @@ public class CleanupTest {
 
   @Test
   public final void testParallel() throws InterruptedException {
-    AtomicBoolean result = new AtomicBoolean(true);
-    ExecutorService pool = Executors.newFixedThreadPool(4, (r) -> {
-      Thread thread = new Thread(r);
+    final AtomicBoolean result = new AtomicBoolean(true);
+    final ExecutorService pool = Executors.newFixedThreadPool(4, (r) -> {
+      final Thread thread = new Thread(r);
       thread.setName("testMany");
       thread.setUncaughtExceptionHandler((t, ex) -> {
         result.set(false);
@@ -141,8 +141,8 @@ public class CleanupTest {
     for (int i = 0; i < 8; i++) {
       pool.execute(() -> {
         try {
-          testCleanup();
-        } catch (Throwable e) {
+          this.testCleanup();
+        } catch (final Throwable e) {
           result.set(false);
         }
       });
@@ -160,7 +160,7 @@ public class CleanupTest {
     final String message = "test";
     {
       MyFinalizable test = new MyFinalizable();
-      Consumer<Throwable> c = (t) -> {
+      final Consumer<Throwable> c = (t) -> {
         refs.add(t.getMessage());
       };
       Cleanup.addExceptionHandler(c);

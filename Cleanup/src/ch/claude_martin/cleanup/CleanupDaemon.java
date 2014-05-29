@@ -1,6 +1,5 @@
 package ch.claude_martin.cleanup;
 
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -15,7 +14,7 @@ final class CleanupDaemon implements Runnable {
     super();
   }
 
-  private static final ReferenceQueue<Cleanup> QUEUE = new ReferenceQueue<>();
+  private static final ReferenceQueue<?> QUEUE = new ReferenceQueue<>();
   private static final Map<CleanupPhantomRef<?, ?>, WeakReference<?>> REFS = new IdentityHashMap<>();
   /**
    * A handler for all exceptions that occur.
@@ -27,35 +26,35 @@ final class CleanupDaemon implements Runnable {
    * 
    */
   private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
-  new AtomicReference<>((t) -> {
-  });
+      new AtomicReference<>((t) -> {
+      });
 
   /** @see Cleanup#addExceptionHandler(Consumer) */
-  static void addExceptionHandler(Consumer<Throwable> handler) {
+  static void addExceptionHandler(final Consumer<Throwable> handler) {
     EXCEPTION_HANDLER.getAndAccumulate(handler, Consumer::andThen);
   }
 
-  static ReferenceQueue<Cleanup> getQueue() {
+  static ReferenceQueue<?> getQueue() {
     return QUEUE;
   }
 
-  static void handle(Throwable t) {
+  static void handle(final Throwable t) {
     EXCEPTION_HANDLER.get().accept(t);
   }
 
   /** @see Cleanup#registerCleanup(Consumer, Object) */
-  static <V> void registerCleanup(Object obj, Consumer<V> cleanup, V value) {
+  static <V> void registerCleanup(final Object obj, final Consumer<V> cleanup, final V value) {
     check(obj, value);
     synchronized (REFS) {
       REFS.put(new CleanupPhantomRef<>(obj, cleanup, value), new WeakReference<>(obj));
     }
   }
-  
-  private static <V> void check(Object obj, V value) {
+
+  private static <V> void check(final Object obj, final V value) {
     if (value == obj)
       throw new IllegalArgumentException("'value' must not be the object itself!");
-    Class<? extends Object> type = value.getClass();
-    boolean isInnerClass = type.getEnclosingClass() == obj.getClass();
+    final Class<? extends Object> type = value.getClass();
+    final boolean isInnerClass = type.getEnclosingClass() == obj.getClass();
     if (type.isAnonymousClass() && isInnerClass)
       throw new IllegalArgumentException("'value' must not be of anonymous class!");
     if (!Modifier.isStatic(type.getModifiers()) && isInnerClass)
@@ -84,14 +83,14 @@ final class CleanupDaemon implements Runnable {
   public void run() {
     while (true) {
       try {
-        Reference<? extends Cleanup> ref = QUEUE.remove();
+        final Reference<?> ref = QUEUE.remove();
         if (ref instanceof CleanupPhantomRef) {
-          ((CleanupPhantomRef<?, ?>) ref).runCleanup();
           synchronized (REFS) {
+            ((CleanupPhantomRef<?, ?>) ref).runCleanup();
             REFS.remove(ref);
           }
         }
-      } catch (Throwable e) {
+      } catch (final Throwable e) {
         EXCEPTION_HANDLER.get().accept(e);
       }
     }

@@ -24,7 +24,7 @@ final class CleanupPhantomRef<T, V> extends PhantomReference<T> {
   }
 
   @SuppressWarnings("unchecked")
-  CleanupPhantomRef(T referent, Consumer<V> cleanup, V value) {
+  CleanupPhantomRef(final T referent, final Consumer<V> cleanup, final V value) {
     super(referent, (ReferenceQueue<? super T>) CleanupDaemon.getQueue());
     this.cleanup = cleanup;
     this.value = value;

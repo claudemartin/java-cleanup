@@ -1,20 +1,9 @@
 package ch.claude_martin.cleanup;
 
-import java.io.Closeable;
 import java.lang.ref.PhantomReference;
-import java.lang.ref.ReferenceQueue;
-import java.lang.reflect.Modifier;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
-
-import com.sun.javafx.geom.transform.Identity;
 
 /**
  * 
@@ -81,7 +70,7 @@ public interface Cleanup {
    * It is recommended that you use this for logging, to be able to find problems in the cleanup
    * code.
    */
-  public static void addExceptionHandler(Consumer<Throwable> handler) {
+  public static void addExceptionHandler(final Consumer<Throwable> handler) {
     CleanupDaemon.addExceptionHandler(handler);
   }
 
@@ -107,7 +96,7 @@ public interface Cleanup {
    * @throws IllegalArgumentException
    *           thrown if value is obviously holding a reference to <i>this</i>
    */
-  public default <V> void registerCleanup(Consumer<V> cleanup, V value) {
+  public default <V> void registerCleanup(final Consumer<V> cleanup, final V value) {
     CleanupDaemon.registerCleanup(this, cleanup, value);
   }
 
@@ -121,7 +110,7 @@ public interface Cleanup {
    *          auto-closeable resources.
    */
   public default <V extends AutoCloseable> void registerAutoClose(
-      @SuppressWarnings("unchecked") V... resources) {
+      @SuppressWarnings("unchecked") final V... resources) {
     registerAutoClose(this, resources);
   }
 
@@ -138,7 +127,7 @@ public interface Cleanup {
    * @throws IllegalArgumentException
    *           thrown if value is obviously holding a reference to <i>this</i>
    */
-  public static <V> void registerCleanup(Object object, Consumer<V> cleanup, V value) {
+  public static <V> void registerCleanup(final Object object, final Consumer<V> cleanup, final V value) {
     CleanupDaemon.registerCleanup(object, cleanup, value);
   }
 
@@ -152,15 +141,15 @@ public interface Cleanup {
    * @param resources
    *          auto-closeable resources.
    */
-  public static <R extends AutoCloseable> void registerAutoClose(Object object,
-      @SuppressWarnings("unchecked") R... resources) {
+  public static <R extends AutoCloseable> void registerAutoClose(final Object object,
+      @SuppressWarnings("unchecked") final R... resources) {
     if (resources == null || Arrays.asList(resources).contains(null))
       throw new NullPointerException("values");
     registerCleanup(object, (res) -> {
-      for (R v : res)
+      for (final R v : res)
         try {
           v.close();
-        } catch (Exception e) {
+        } catch (final Exception e) {
           CleanupDaemon.handle(e);
         }
     }, resources);
