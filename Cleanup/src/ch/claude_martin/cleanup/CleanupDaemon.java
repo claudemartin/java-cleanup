@@ -1,13 +1,11 @@
 package ch.claude_martin.cleanup;
 
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -24,11 +22,12 @@ final class CleanupDaemon implements Runnable {
    * {@link InterruptedException}: thrown when the {@link #THREAD thread} is interrupted. The thread
    * will continue, unless this handler throws a {@link RuntimeException}.
    * <p>
-   * {@link RuntimeException}: thrown when the {@link CleanupPhantomRef#finalizer} throws it.
+   * {@link RuntimeException}: thrown when the cleanup-code throws it.
    * 
    */
   private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
-      new AtomicReference<>((t) -> {  });
+  new AtomicReference<>((t) -> {
+  });
 
   /** @see Cleanup#addExceptionHandler(Consumer) */
   static void addExceptionHandler(Consumer<Throwable> handler) {
@@ -38,7 +37,7 @@ final class CleanupDaemon implements Runnable {
   static ReferenceQueue<Cleanup> getQueue() {
     return QUEUE;
   }
-  
+
   static void handle(Throwable t) {
     EXCEPTION_HANDLER.get().accept(t);
   }
@@ -60,6 +59,9 @@ final class CleanupDaemon implements Runnable {
       THREAD.setDaemon(true);
       THREAD.setPriority(Thread.MIN_PRIORITY);
       THREAD.start();
+      THREAD.setUncaughtExceptionHandler((thread, t) -> {
+        handle(t);
+      });
     }
   }
 
@@ -69,7 +71,7 @@ final class CleanupDaemon implements Runnable {
       try {
         Reference<? extends Cleanup> ref = QUEUE.remove();
         if (ref instanceof CleanupPhantomRef) {
-          ((CleanupPhantomRef<?, ?>) ref).runFinalization();
+          ((CleanupPhantomRef<?, ?>) ref).runCleanup();
           synchronized (REFS) {
             REFS.remove(ref);
           }
