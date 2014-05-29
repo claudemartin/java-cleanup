@@ -27,14 +27,10 @@ import com.sun.javafx.geom.transform.Identity;
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
  * <p>
- * <style type="text/css">
- * table { width: 100%; }
- * td.pro { width: 40%; }
- * ul.pro, ul.con { list-style: none; padding-left: 0; margin-left: 0; } 
- * ul.pro li, ul.con li { padding-left: 1.5em; text-indent: -1.5em; } 
- * ul.pro li::before { content: "➕"; padding-right: 0.5em; }
- * ul.con li::before { content: "➖"; padding-right: 0.5em; }
- * </style>
+ * <style type="text/css"> table { width: 100%; } td.pro { width: 40%; } ul.pro, ul.con {
+ * list-style: none; padding-left: 0; margin-left: 0; } ul.pro li, ul.con li { padding-left: 1.5em;
+ * text-indent: -1.5em; } ul.pro li::before { content: "➕"; padding-right: 0.5em; } ul.con
+ * li::before { content: "➖"; padding-right: 0.5em; } </style>
  * 
  * Pros and Cons and Pitfalls:
  * <table summary="List of pros and cons of this code.">
@@ -53,9 +49,12 @@ import com.sun.javafx.geom.transform.Identity;
  * <li>Does not work if you leak a reference to <tt>this</tt> to the cleanup-code. References are
  * often implicit and not visible in the code. Many of such mistakes can not be detected and the
  * object is never garbage collected (memory leak).</li>
- * <li>You could close the resources in the wrong order.</li>
  * <li>No guarantee that the code runs when the JVM exits.</li>
+ * <li>Invocations are not ordered and you could close the resources in the wrong order.</li>
+ * <li>There is still a risk that cleanup is done for incompletely constructed objects.</li>
  * <li>Memory visibility problems, as the cleanup is performed in a daemon thread.</li>
+ * <li>Use of locks or other synchronization-based mechanisms within a cleanup can cause deadlock or
+ * starvation.</li>
  * </ul>
  * </td>
  * </tr>
