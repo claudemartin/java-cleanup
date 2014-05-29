@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
 import com.sun.javafx.geom.transform.Identity;
@@ -25,6 +26,41 @@ import com.sun.javafx.geom.transform.Identity;
  * <p>
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
+ * <p>
+ * <style type="text/css">
+ * table { width: 100%; }
+ * td.pro { width: 40%; }
+ * ul.pro, ul.con { list-style: none; padding-left: 0; margin-left: 0; } 
+ * ul.pro li, ul.con li { padding-left: 1.5em; text-indent: -1.5em; } 
+ * ul.pro li::before { content: "➕"; padding-right: 0.5em; }
+ * ul.con li::before { content: "➖"; padding-right: 0.5em; }
+ * </style>
+ * 
+ * Pros and Cons and Pitfalls:
+ * <table summary="List of pros and cons of this code.">
+ * <tr align="left" valign="top">
+ * <td class="pro">
+ * <ul class="pro">
+ * <li>You don't need to manually chain the cleanup code.</li>
+ * <li>Cleanup is done when the objects is already removed.</li>
+ * <li>Less risk of {@link OutOfMemoryError} during GC.</li>
+ * <li>Very obvious mistakes in usage are detected.</li>
+ * <li>Exceptions can be handled by registered exception handlers.</li>
+ * </ul>
+ * </td>
+ * <td class="con">
+ * <ul class="con">
+ * <li>Does not work if you leak a reference to <tt>this</tt> to the cleanup-code. References are
+ * often implicit and not visible in the code. Many of such mistakes can not be detected and the
+ * object is never garbage collected (memory leak).</li>
+ * <li>You could close the resources in the wrong order.</li>
+ * <li>No guarantee that the code runs when the JVM exits.</li>
+ * <li>Memory visibility problems, as the cleanup is performed in a daemon thread.</li>
+ * </ul>
+ * </td>
+ * </tr>
+ * </table>
+ * 
  * 
  * @author Claude Martin
  *
@@ -49,12 +85,17 @@ public interface Cleanup {
   /**
    * Register method to <i>clean up</i> after garbage collection removed this.
    * <p>
-   * The value is any data structure that holds everything you need for the cleanup. <br/>
-   * Examples: Database connection to be closed. Stream to be closed. ID to be logged. etc. But it
-   * must not hold any references to <i>this</i>. Note that instances of inner / anonymous classes
-   * also hold implicit references to the outer instance.
+   * The value is any data structure that holds everything you need for the cleanup. <br>
+   * Examples: Database connection to be closed. Stream to be closed. ID to be logged. etc. <br>
+   * But it must not hold any references to <i>this</i>. Note that instances of inner / anonymous
+   * classes also hold implicit references to the outer instance. However, you can reference fields
+   * directly in the lambda, instead of using value, as long as the objects do not reference
+   * <tt>this</tt>.
    * <p>
    * This can be called multiple times and each time a new {@link PhantomReference} will be created.
+   * <p>
+   * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup codes use different values.
+   * So you might want to use some {@link Lock} to ensure visibility.
    * 
    * @param cleanup
    *          A consumer to clean up the value

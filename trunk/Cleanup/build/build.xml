@@ -1,0 +1,25 @@
+<project default="build" name="Cleanup" basedir="..">
+  
+  <target name="build" depends="compile" description="generate the distribution">
+    <tstamp>
+       <format property="TIME" pattern="yyyy-MM-dd-HH-mm-ss" locale="en,GB"/>
+    </tstamp>
+    <jar jarfile="build/${ant.project.name}.jar" basedir="bin">
+      <exclude name="**Test.class" />
+      <manifest>
+        <attribute name="Manifest-Version" value="1.0" />
+        <attribute name="Built-By" value="Claude Martin" />
+        <attribute name="Sealed" value="true" />
+        <attribute name="Implementation-Time" value="${TIME}" />
+        <attribute name="Implementation-Title" value="${ant.project.name}" />
+        <attribute name="Implementation-Vendor" value="Claude Martin" />
+        <attribute name="Implementation-Vendor-URL" value="http://claude-martin.ch/" />
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="compile" description="compile the source code">
+    <javac srcdir="src" destdir="bin" debug="off" />
+  </target>
+
+</project>
