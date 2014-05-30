@@ -116,7 +116,7 @@ public interface Cleanup {
    *          runnable cleanup code
    * @see #registerCleanup(Consumer, Object)
    */
-  public default <V> void registerCleanup(final Runnable cleanup) {
+  public default void registerCleanup(final Runnable cleanup) {
     CleanupDaemon.registerCleanup(this, (_null) -> { cleanup.run(); }, null);
   }
 
