@@ -99,6 +99,15 @@ public interface Cleanup {
   public default <V> void registerCleanup(final Consumer<V> cleanup, final V value) {
     CleanupDaemon.registerCleanup(this, cleanup, value);
   }
+  
+  /**
+   * Convenience method for cleanup code that does not need any value. 
+   * @param cleanup runnable cleanup code
+   * @see #registerCleanup(Consumer, Object)
+   */
+  public default <V> void registerCleanup(final Runnable cleanup) {
+    CleanupDaemon.registerCleanup(this, (_null) -> { cleanup.run(); }, null);
+  }
 
   /**
    * Easy registration of auto-closeable resources.
