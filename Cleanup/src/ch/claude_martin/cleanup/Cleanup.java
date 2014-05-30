@@ -105,7 +105,13 @@ public interface Cleanup {
    * <p>
    * Make sure you do not capture a reference to <tt>this</tt> in your expression. However, you may
    * capture other values, like objects from local, effectively final variables.
-   * 
+   * <p>
+   * This is especially useful for static cleanup code:<br/>
+   * {@code foo.registerCleanup(Foo::cleanup); }<br/>
+   * All you need is a static, void, no-args method in your class:<br/>
+   * <code>class Foo {<br/>
+   * &nbsp; public static void cleanup() { ... }<br/>
+   * }</code>
    * @param cleanup
    *          runnable cleanup code
    * @see #registerCleanup(Consumer, Object)
