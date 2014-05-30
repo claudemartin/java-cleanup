@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -27,15 +28,18 @@ import org.junit.Test;
  */
 @SuppressWarnings("static-method")
 public class CleanupTest {
-  private static final class MyFinalizable implements Cleanup {
+  @BeforeClass
+  public static void before() {
+    Example.logger.setLevel(Level.OFF);
+    CleanupDaemon.THREAD.setPriority(Thread.NORM_PRIORITY+1); // only while testing
+    CleanupDaemon.addExceptionHandler((ex) -> {
+      if(ex instanceof TestException)
+        return; // see testExceptionHandler()
+      fail("Exception: " + ex);
+    });
+  }
 
-    @BeforeClass
-    public static void before() {
-      CleanupDaemon.THREAD.setPriority(Thread.MAX_PRIORITY); // only while testing
-      CleanupDaemon.addExceptionHandler((ex) -> {
-        fail("Exception: " + ex);
-      });
-    }
+  private static final class MyFinalizable implements Cleanup {
 
     public MyFinalizable() {
       super();
@@ -67,7 +71,7 @@ public class CleanupTest {
   }
 
   private static void gc() {
-    for (int j = 0; j < 10; j++) {
+    for (int j = 0; j < 20; j++) {
       Thread.yield();
       System.gc();
       System.runFinalization();
@@ -159,11 +163,11 @@ public class CleanupTest {
 
   @Test
   public final void testNullValue() throws Exception {
-    final AtomicBoolean result = new AtomicBoolean(true);
+    final AtomicBoolean result = new AtomicBoolean(false);
 
     Example example = new Example();
     example.registerCleanup(() -> {
-      result.set(false);
+      result.set(true);
     });
 
     example = null;
@@ -171,15 +175,11 @@ public class CleanupTest {
     assertTrue(result.get());
   }
 
-  @Test
+  @Test(expected=NullPointerException.class)
   public final void testNullLambda() throws Exception {
     Example example = new Example();
-    try {
-      example.registerCleanup(null, -1);
-      fail("null should not be allowed.");
-    } catch (NullPointerException e) {
-      // expected!
-    }
+    example.registerCleanup(null, -1);
+    fail("null should not be allowed.");
   }
 
   @Test
@@ -195,12 +195,19 @@ public class CleanupTest {
       Cleanup.addExceptionHandler(c);
       Cleanup.addExceptionHandler(c);
       test.registerCleanup((v) -> {
-        throw new RuntimeException(message);
+        throw new TestException(message);
       }, 42);
       test = null;
     }
     gc();
-    assertEquals(3, refs.size());
     assertEquals(asList(message, message, message), refs);
+  }
+  
+  /** Used to test Exceptions in {@link #testExceptionHandler()}. */
+  @SuppressWarnings("serial")
+  private static final class TestException extends RuntimeException {
+    public TestException(final String message) {
+      super(message);
+    }
   }
 }
