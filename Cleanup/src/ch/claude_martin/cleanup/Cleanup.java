@@ -54,6 +54,17 @@ import java.util.function.Consumer;
  * </tr>
  * </table>
  * 
+ * <p>
+ * A note from the author:<br>
+ * I decided to use the name <i>Cleanup</i> because it is simple to understand. However, there is
+ * the <a href="http://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html"
+ * >try-with-resource statement</a> which is much better if you actually need to close something.
+ * <i>Cleanup</i> should be used for code that isn't critical, such as logging and debugging.<br>
+ * I recommend using static methods instead of lambdas:<br>
+ * {@code foo.registerCleanup(Foo::cleanup); }<br>
+ * This is shown in the Example, which you can find in the test-folder. It is very safe and easy to
+ * understand for others, as you can include the static method in your API documentation.
+ * 
  * @author Claude Martin
  *
  */
