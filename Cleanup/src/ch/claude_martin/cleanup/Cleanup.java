@@ -92,7 +92,7 @@ public interface Cleanup {
    * @param cleanup
    *          A consumer to clean up the value
    * @param value
-   *          All data needed for cleanup
+   *          All data needed for cleanup, or null
    * @throws IllegalArgumentException
    *           thrown if value is obviously holding a reference to <i>this</i>
    */

@@ -3,6 +3,7 @@ package ch.claude_martin.cleanup;
 import static java.util.Arrays.asList;
 import static java.util.Collections.synchronizedList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -120,7 +121,9 @@ public class CleanupTest {
   public final void testStatic() {
     Object test = new String("test");
     final AtomicBoolean result = new AtomicBoolean(false);
-    Cleanup.registerCleanup(test, (v) -> { result.set(true); }, new byte[10]);
+    Cleanup.registerCleanup(test, (v) -> {
+      result.set(true);
+    }, new byte[10]);
     test = null;
     gc();
     assertTrue(result.get());
@@ -152,6 +155,32 @@ public class CleanupTest {
     gc();
     Thread.sleep(100);
     assertTrue(result.get());
+  }
+
+  @Test
+  public final void testNullValue() throws Exception {
+    final AtomicBoolean result = new AtomicBoolean(true);
+
+    Example example = new Example();
+    example.registerCleanup((v) -> {
+      if (v != null)
+        result.set(false);
+    }, null);
+
+    example = null;
+    gc();
+    assertTrue(result.get());
+  }
+
+  @Test
+  public final void testNullLambda() throws Exception {
+    Example example = new Example();
+    try {
+      example.registerCleanup(null, -1);
+      fail("null should not be allowed.");
+    } catch (NullPointerException e) {
+      // expected!
+    }
   }
 
   @Test
