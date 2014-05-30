@@ -162,10 +162,9 @@ public class CleanupTest {
     final AtomicBoolean result = new AtomicBoolean(true);
 
     Example example = new Example();
-    example.registerCleanup((v) -> {
-      if (v != null)
-        result.set(false);
-    }, null);
+    example.registerCleanup(() -> {
+      result.set(false);
+    });
 
     example = null;
     gc();
