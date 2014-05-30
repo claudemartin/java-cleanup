@@ -1,5 +1,7 @@
 package ch.claude_martin.cleanup;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
@@ -49,6 +51,8 @@ final class CleanupDaemon implements Runnable {
 
   /** @see Cleanup#registerCleanup(Consumer, Object) */
   static <V> void registerCleanup(final Object obj, final Consumer<V> cleanup, final V value) {
+    requireNonNull(obj, "obj");
+    requireNonNull(cleanup, "cleanup");
     check(obj, value);
     synchronized (REFS) {
       REFS.put(new CleanupPhantomRef<>(obj, cleanup, value), new WeakReference<>(obj));
@@ -57,6 +61,7 @@ final class CleanupDaemon implements Runnable {
 
   /** Checks if value could hold a reference to obj. */
   private static <V> void check(final Object obj, final V value) {
+    if(null == value) return;
     if (value == obj)
       throw new IllegalArgumentException("'value' must not be the object itself!");
     final Class<? extends Object> type = value.getClass();
