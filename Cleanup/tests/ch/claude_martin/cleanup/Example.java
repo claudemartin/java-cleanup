@@ -38,7 +38,7 @@ public final class Example implements Cleanup {
     // Make sure the object is completely constructed and valid.
 
     // We can register some cleanup code here and the invoker of this constructor can add more code
-    // later. But if this is called here it must be that last think in this constructor. And as this
+    // later. But if this is called here it must be the last thing in this constructor. And as this
     // class should be final there is no super-constructor that could invalidate this object.
     this.registerCleanup((value) -> {
       try {
@@ -51,11 +51,41 @@ public final class Example implements Cleanup {
     // For convenience there is a method for auto-closeable resources:
     // this.registerAutoClose(this.resource);
     // The above does nearly the same.
+    
+    // I actually recommend this pattern:
+    this.registerCleanup(Example::cleanup);
+    // The actual method is implemented further below.
+    // Note also that you can register as many cleanup routines as you want!
   }
 
+  /**
+   * We DO NOT use a finalizer!!
+   * <p>
+   * Joshua Bloch explains why:<br>
+   * <a href="http://www.informit.com/articles/article.aspx?p=1216151&seqNum=7" >Creating and
+   * Destroying Java Objects - Item 7: Avoid finalizers</a>
+   * 
+   * @see #cleanup()
+   */
   protected void finalize() throws Throwable {
-    // We DO NOT use a finalizer!!
-  };
+    // DON'T!
+  }
+  
+  /**
+   * An alternative for {@link #finalize()}. Must be static, void and without arguments. It's
+   * basically like {@link Runnable#run()}, but static. The name doesn't matter, but 'cleanup' is
+   * recommended.
+   * <p>
+   * This has a great benefit: It's impossible to have a reference to <tt>this</tt> inside a static
+   * method. <br>
+   * And the registration is also very simple and concise:<br>
+   * {@code this.registerCleanup(Example::cleanup); }<br>
+   * Another bonus is that you can add javadoc to a method. Try that on a lambda-expression.
+   */
+  protected static void cleanup() {
+    // This comes close to a finalize-method.
+    logger.info("An instance of Example was removed.");
+  }
 
   /**
    * Run this in a console (without arguments).
