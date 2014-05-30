@@ -19,9 +19,12 @@ final class CleanupPhantomRef<T, V> extends PhantomReference<T> {
 
   /** Calls the cleanup-code by passing value to the Consumer. */
   void runCleanup() {
-    synchronized (this.value) {
+    if (null != this.value)
+      synchronized (this.value) {
+        this.cleanup.accept(this.value);
+      }
+    else
       this.cleanup.accept(this.value);
-    }
   }
 
   @SuppressWarnings("unchecked")
