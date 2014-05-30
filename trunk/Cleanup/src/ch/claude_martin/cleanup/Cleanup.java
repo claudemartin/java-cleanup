@@ -101,8 +101,13 @@ public interface Cleanup {
   }
   
   /**
-   * Convenience method for cleanup code that does not need any value. 
-   * @param cleanup runnable cleanup code
+   * Convenience method for cleanup code that does not need any value.
+   * <p>
+   * Make sure you do not capture a reference to <tt>this</tt> in your expression. However, you may
+   * capture other values, like objects from local, effectively final variables.
+   * 
+   * @param cleanup
+   *          runnable cleanup code
    * @see #registerCleanup(Consumer, Object)
    */
   public default <V> void registerCleanup(final Runnable cleanup) {
