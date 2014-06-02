@@ -140,8 +140,7 @@ public interface Cleanup {
    * @param resources
    *          auto-closeable resources.
    */
-  public default <V extends AutoCloseable> void registerAutoClose(
-      @SuppressWarnings("unchecked") final V... resources) {
+  public default void registerAutoClose(final AutoCloseable... resources) {
     registerAutoClose(this, resources);
   }
 
@@ -172,14 +171,13 @@ public interface Cleanup {
    * @param resources
    *          auto-closeable resources.
    */
-  public static <R extends AutoCloseable> void registerAutoClose(final Object object,
-      @SuppressWarnings("unchecked") final R... resources) {
+  public static void registerAutoClose(final Object object, final AutoCloseable... resources) {
     if (resources == null || Arrays.asList(resources).contains(null))
       throw new NullPointerException("values");
     registerCleanup(object, (res) -> {
-      for (final R v : res)
+      for (final AutoCloseable a : res)
         try {
-          v.close();
+          a.close();
         } catch (final Exception e) {
           CleanupDaemon.handle(e);
         }
