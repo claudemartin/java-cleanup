@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="javadoc">
+<project default="javadoc" name="Cleanup">
     <target name="javadoc">
       <javadoc access="public" author="true" 
         destdir="../doc" 
