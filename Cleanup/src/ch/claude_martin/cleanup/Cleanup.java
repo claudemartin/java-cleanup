@@ -10,8 +10,8 @@ import java.util.function.Consumer;
  * This is an interface to add cleanup code to any type. The method
  * {@link #registerCleanup(Consumer, Object)} must be run at the end of or after construction (code
  * run after that could invalidate the object, which could lead to problems). The configured
- * <i>cleanup</i>-code is run when <i>this</i> does not exist anymore. Therefore the <i>value</i>
- * must not contain any references to <i>this</i>.
+ * <i>cleanup</i>-code is run when <code>this</code> does not exist anymore. Therefore the <i>value</i>
+ * must not contain any references to <code>this</code>.
  * <p>
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
@@ -22,8 +22,9 @@ import java.util.function.Consumer;
  *   ul.pro, ul.con {
  *   list-style: none; padding-left: 0; margin-left: 0; } 
  *   ul.pro li, ul.con li { padding-left: 1.5em;text-indent: -1.5em; } 
- *   ul.pro li::before { content: "➕"; padding-right: 0.5em; } 
- *   ul.con li::before { content: "➖"; padding-right: 0.5em; } 
+ *   ul.pro li::before, ul.con li::before { padding-right: 0.5em; font-weight: bold; }
+ *   ul.pro li::before { content: "+"; } 
+ *   ul.con li::before { content: "—"; } 
  * </style>
  * 
  * Pros and Cons and Pitfalls:
@@ -40,7 +41,7 @@ import java.util.function.Consumer;
  * </td>
  * <td class="con">
  * <ul class="con">
- * <li>Does not work if you leak a reference to <tt>this</tt> to the cleanup-code. References are
+ * <li>Does not work if you leak a reference to <code>this</code> to the cleanup-code. References are
  * often implicit and not visible in the code. Many of such mistakes can not be detected and the
  * object is never garbage collected (memory leak).</li>
  * <li>No guarantee that the code runs when the JVM exits.</li>
