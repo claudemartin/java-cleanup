@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
 /**
- * This is not a Test, but just an Example. The code is explained by comments.
+ * This is not a Unit-Test, but just an Example. The code is explained by comments.
  * 
  * Read the pros and cons also: {@link Cleanup}
  */
@@ -39,7 +39,7 @@ public final class Example implements Cleanup {
 
     // We can register some cleanup code here and the invoker of this constructor can add more code
     // later. But if this is called here it must be the last thing in this constructor. And as this
-    // class should be final there is no super-constructor that could invalidate this object.
+    // class should be final there is no child-constructor that could invalidate this object.
     this.registerCleanup((value) -> {
       try {
         // 'value' instead of 'this.resource', so no reference to 'this' is leaked:
@@ -96,7 +96,7 @@ public final class Example implements Cleanup {
     Cleanup.addExceptionHandler((ex) -> {
       logger.warning(ex.toString());
     });
-    // A boolean that will be set to someting larget than 0 on cleanup:
+    // A boolean that will be set to something larger than 0 on cleanup:
     final AtomicLong ms = new AtomicLong(0L);
     // An instance of the 'Example':
     Example example = new Example();
