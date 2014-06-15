@@ -129,7 +129,7 @@ public interface Cleanup {
    * @see #registerCleanup(Consumer, Object)
    */
   public default void registerCleanup(final Runnable cleanup) {
-    CleanupDaemon.registerCleanup(this, (_null) -> { cleanup.run(); }, null);
+    CleanupDaemon.registerCleanup(this, _null -> cleanup.run(), null);
   }
 
   /**
@@ -175,7 +175,7 @@ public interface Cleanup {
   public static void registerAutoClose(final Object object, final AutoCloseable... resources) {
     if (resources == null || Arrays.asList(resources).contains(null))
       throw new NullPointerException("values");
-    registerCleanup(object, (res) -> {
+    registerCleanup(object, res -> {
       for (final AutoCloseable a : res)
         try {
           a.close();
