@@ -1,17 +1,10 @@
 package ch.claude_martin.cleanup;
 
-import static java.util.Collections.newSetFromMap;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.TemporalUnit;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 
@@ -51,7 +44,7 @@ public final class Example implements Cleanup {
     // For convenience there is a method for auto-closeable resources:
     // this.registerAutoClose(this.resource);
     // The above does nearly the same.
-    
+
     // I actually recommend this pattern:
     this.registerCleanup(Example::cleanup);
     // The actual method is implemented further below.
@@ -70,7 +63,7 @@ public final class Example implements Cleanup {
   protected void finalize() throws Throwable {
     // DON'T!
   }
-  
+
   /**
    * An alternative for {@link #finalize()}. Must be static, void and without arguments. It's
    * basically like {@link Runnable#run()}, but static. The name doesn't matter, but 'cleanup' is
@@ -88,15 +81,13 @@ public final class Example implements Cleanup {
   }
 
   /**
-   * Run this in a console (without arguments).
-   * It will tell you how long an object existed until cleanup was invoked.
+   * Run this in a console (without arguments). It will tell you how long an object existed until
+   * cleanup was invoked.
    */
   public static void main(String[] args) throws Exception {
     // We can register global exception handlers:
-    Cleanup.addExceptionHandler((ex) -> {
-      logger.warning(ex.toString());
-    });
-    // A boolean that will be set to something larger than 0 on cleanup:
+    Cleanup.addExceptionHandler(ex -> logger.warning(ex.toString()));
+    // A long that will be set to something larger than 0 on cleanup:
     final AtomicLong ms = new AtomicLong(0L);
     // An instance of the 'Example':
     Example example = new Example();
@@ -105,21 +96,21 @@ public final class Example implements Cleanup {
         final long nanos = System.nanoTime() - then;
         ms.set(nanos / 1_000_000L); // = milliseconds
       }, System.nanoTime()); // measured right after 'example' was created.
-    
+
     // The cleanup code was not executed yet!
     if (ms.get() != 0)
       throw new RuntimeException("Something went wrong.");
-    
+
     System.out.println("The object is created.");
     System.out.println("Hit <ENTER> to have it removed.");
     System.in.read();
-    
+
     // We want it to be removed and cleaned up:
     example = null; // free to be removed by GC.
     // This is just for the test, as the cleanup-thread also has minimum priority:
     Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
     // Now we try to really get rid of it:
-    for (int n = 0; n < 10; n++) {
+    for (int n = 0; n < 100 && ms.get() == 0; n++) {
       // Allow GC and CleanupDaemon to work:
       Thread.sleep(10);
       System.gc();
