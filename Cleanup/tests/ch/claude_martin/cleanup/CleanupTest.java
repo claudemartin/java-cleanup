@@ -39,9 +39,10 @@ public class CleanupTest {
     });
   }
 
-  private static final class MyFinalizable implements Cleanup {
+  /** "cleanupable" is now a word. */
+  private static final class MyCleanupable implements Cleanup {
 
-    public MyFinalizable() {
+    public MyCleanupable() {
       super();
     }
 
@@ -50,7 +51,7 @@ public class CleanupTest {
 
     public final Object getAnonymous() {
       return new Cloneable() {
-        // this$0 = implicit reference to MyFinalizable.this
+        // this$0 = implicit reference to MyCleanupable.this
       };
     }
   }
@@ -60,7 +61,7 @@ public class CleanupTest {
     final int answer = 42;
     final AtomicInteger i = new AtomicInteger(0);
     {
-      MyFinalizable test = new MyFinalizable();
+      MyCleanupable test = new MyCleanupable();
       test.registerCleanup((v) -> {
         i.set(v);
       }, answer);
@@ -81,7 +82,7 @@ public class CleanupTest {
   @Test
   public final void testTwice() {
     final AtomicInteger i = new AtomicInteger(0);
-    MyFinalizable test = new MyFinalizable();
+    MyCleanupable test = new MyCleanupable();
     test.registerCleanup((v) -> {
       i.incrementAndGet();
     }, 42);
@@ -95,28 +96,28 @@ public class CleanupTest {
 
   @Test(expected = IllegalArgumentException.class)
   public final void testThis() {
-    final MyFinalizable test = new MyFinalizable();
+    final MyCleanupable test = new MyCleanupable();
     test.registerCleanup((v) -> {
     }, test);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public final void testAnonymous() {
-    final MyFinalizable test = new MyFinalizable();
+    final MyCleanupable test = new MyCleanupable();
     test.registerCleanup((v) -> {
     }, test.getAnonymous());
   }
 
   @Test(expected = IllegalArgumentException.class)
   public final void testLambda() {
-    final MyFinalizable test = new MyFinalizable();
+    final MyCleanupable test = new MyCleanupable();
     test.registerCleanup((v) -> {
     }, Function.identity());
   }
 
   @Test
   public final void testArray() {
-    final MyFinalizable test = new MyFinalizable();
+    final MyCleanupable test = new MyCleanupable();
     test.registerCleanup((v) -> {
     }, new byte[10]);
   }
@@ -187,7 +188,7 @@ public class CleanupTest {
     final List<String> refs = synchronizedList(new ArrayList<>());
     final String message = "test";
     {
-      MyFinalizable test = new MyFinalizable();
+      MyCleanupable test = new MyCleanupable();
       final Consumer<Throwable> c = (t) -> {
         refs.add(t.getMessage());
       };
