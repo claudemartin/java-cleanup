@@ -17,7 +17,7 @@ final class CleanupPhantomRef<T, V> extends PhantomReference<T> {
   private final Consumer<V> cleanup;
   private final V value;
 
-  /** Calls the cleanup-code by passing value to the Consumer. */
+  /** Calls the cleanup action by passing value to the Consumer. */
   void runCleanup() {
     if (null != this.value)
       synchronized (this.value) {
