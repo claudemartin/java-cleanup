@@ -30,7 +30,7 @@ public final class Example implements Cleanup {
 
     // Make sure the object is completely constructed and valid.
 
-    // We can register some cleanup code here and the invoker of this constructor can add more code
+    // We can register some cleanup action here and the invoker of this constructor can add more code
     // later. But if this is called here it must be the last thing in this constructor. And as this
     // class should be final there is no child-constructor that could invalidate this object.
     this.registerCleanup((value) -> {
@@ -97,7 +97,7 @@ public final class Example implements Cleanup {
         ms.set(nanos / 1_000_000L); // = milliseconds
       }, System.nanoTime()); // measured right after 'example' was created.
 
-    // The cleanup code was not executed yet!
+    // The cleanup action was not executed yet!
     if (ms.get() != 0)
       throw new RuntimeException("Something went wrong.");
 

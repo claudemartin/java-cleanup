@@ -21,18 +21,17 @@ final class CleanupDaemon implements Runnable {
   private static final Map<CleanupPhantomRef<?, ?>, WeakReference<?>> REFS = new IdentityHashMap<>();
   /**
    * A handler for all exceptions that occur. 
-   * The consumer can be linked to more consumers/handlers.
+   * The consumer can be {@link Consumer#andThen(Consumer) linked} to more consumers/handlers.
    * 
    * <p>
    * {@link InterruptedException}: thrown when the {@link #THREAD thread} is interrupted. The thread
    * will continue, unless this handler throws a {@link RuntimeException}.
    * <p>
-   * {@link RuntimeException}: thrown when the cleanup-code throws it.
+   * {@link RuntimeException}: thrown when the cleanup action throws it.
    * 
    */
   private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
-      new AtomicReference<>((t) -> {
-      });
+      new AtomicReference<>(t -> {});
 
   /** @see Cleanup#addExceptionHandler(Consumer) */
   static void addExceptionHandler(final Consumer<Throwable> handler) {
@@ -75,18 +74,16 @@ final class CleanupDaemon implements Runnable {
   }
 
   /**
-   * The thread, which will run the cleanup-code.
+   * The thread, which will run the cleanup actions.
    */
   static final Thread THREAD = new Thread(new CleanupDaemon());
   static { // this is only run if and when this class is loaded.
     synchronized (THREAD) {
-      THREAD.setName(Cleanup.class.getName() + "-Daemon");
+      THREAD.setName(CleanupDaemon.class.getName());
       THREAD.setDaemon(true);
       THREAD.setPriority(Thread.MIN_PRIORITY);
       THREAD.start();
-      THREAD.setUncaughtExceptionHandler((thread, t) -> {
-        handle(t);
-      });
+      THREAD.setUncaughtExceptionHandler((thread, t) -> handle(t));
     }
   }
 

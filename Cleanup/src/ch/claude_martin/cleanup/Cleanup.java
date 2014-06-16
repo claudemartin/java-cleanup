@@ -7,11 +7,11 @@ import java.util.function.Consumer;
 
 /**
  * 
- * This is an interface to add cleanup code to any type. The method
+ * This is an interface to add cleanup actions to any type. The method
  * {@link #registerCleanup(Consumer, Object)} must be run at the end of or after construction (code
  * run after that could invalidate the object, which could lead to problems). The configured
- * <i>cleanup</i>-code is run when <code>this</code> does not exist anymore. Therefore the <i>value</i>
- * must not contain any references to <code>this</code>.
+ * <i>cleanup</i> action is run when <code>this</code> does not exist anymore. Therefore the
+ * <i>value</i> must not contain any references to <code>this</code>.
  * <p>
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
@@ -32,7 +32,7 @@ import java.util.function.Consumer;
  * <tr align="left" valign="top">
  * <td class="pro">
  * <ul class="pro">
- * <li>You don't need to manually chain the cleanup code.</li>
+ * <li>You don't need to manually chain the cleanup actions.</li>
  * <li>Cleanup is done when the objects is already removed.</li>
  * <li>Less risk of {@link OutOfMemoryError} during GC.</li>
  * <li>Very obvious mistakes in usage are detected.</li>
@@ -41,8 +41,8 @@ import java.util.function.Consumer;
  * </td>
  * <td class="con">
  * <ul class="con">
- * <li>Does not work if you leak a reference to <code>this</code> to the cleanup-code. References are
- * often implicit and not visible in the code. Many of such mistakes can not be detected and the
+ * <li>Does not work if you leak a reference to <code>this</code> to the cleanup action. References
+ * are often implicit and not visible in the code. Many of such mistakes can not be detected and the
  * object is never garbage collected (memory leak).</li>
  * <li>No guarantee that the code runs when the JVM exits.</li>
  * <li>Invocations are not ordered and you could close the resources in the wrong order.</li>
@@ -80,7 +80,7 @@ public interface Cleanup {
    * {@link Thread#interrupt()} to interrupt the thread again.
    * <p>
    * It is recommended that you use this for logging, to be able to find problems in the cleanup
-   * code.
+   * action.
    */
   public static void addExceptionHandler(final Consumer<Throwable> handler) {
     CleanupDaemon.addExceptionHandler(handler);
@@ -98,11 +98,11 @@ public interface Cleanup {
    * <p>
    * This can be called multiple times and each time a new {@link PhantomReference} will be created.
    * <p>
-   * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup codes use different values.
+   * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup actions use different values.
    * So you might want to use some {@link Lock} to ensure visibility.
    * 
    * @param cleanup
-   *          A consumer to clean up the value
+   *          A consumer that defines the cleanup action
    * @param value
    *          All data needed for cleanup, or null
    * @throws IllegalArgumentException
@@ -113,19 +113,19 @@ public interface Cleanup {
   }
   
   /**
-   * Convenience method for cleanup code that does not need any value.
+   * Convenience method for cleanup actions that does not need any value.
    * <p>
    * Make sure you do not capture a reference to <tt>this</tt> in your expression. However, you may
    * capture other values, like objects from local, effectively final variables.
    * <p>
-   * This is especially useful for static cleanup code:<br/>
+   * This is especially useful for static cleanup actions:<br/>
    * {@code foo.registerCleanup(Foo::cleanup); }<br/>
    * All you need is a static, void, no-args method in your class:<br/>
    * <code>class Foo {<br/>
    * &nbsp; public static void cleanup() { ... }<br/>
    * }</code>
    * @param cleanup
-   *          runnable cleanup code
+   *          runnable cleanup action
    * @see #registerCleanup(Consumer, Object)
    */
   public default void registerCleanup(final Runnable cleanup) {
