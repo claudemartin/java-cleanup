@@ -80,10 +80,10 @@ final class CleanupDaemon implements Runnable {
   static { // this is only run if and when this class is loaded.
     synchronized (THREAD) {
       THREAD.setName(CleanupDaemon.class.getName());
-      THREAD.setDaemon(true);
+      THREAD.setDaemon(true); // daemon by default
       THREAD.setPriority(Thread.MIN_PRIORITY);
-      THREAD.start();
       THREAD.setUncaughtExceptionHandler((thread, t) -> handle(t));
+      THREAD.start();
     }
   }
 

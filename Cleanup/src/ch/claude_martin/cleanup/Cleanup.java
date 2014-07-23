@@ -1,6 +1,8 @@
 package ch.claude_martin.cleanup;
 
 import java.lang.ref.PhantomReference;
+import java.lang.ref.ReferenceQueue;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
@@ -124,6 +126,7 @@ public interface Cleanup {
    * <code>class Foo {<br/>
    * &nbsp; public static void cleanup() { ... }<br/>
    * }</code>
+   * 
    * @param cleanup
    *          runnable cleanup action
    * @see #registerCleanup(Consumer, Object)
@@ -158,7 +161,8 @@ public interface Cleanup {
    * @throws IllegalArgumentException
    *           thrown if value is obviously holding a reference to <i>this</i>
    */
-  public static <V> void registerCleanup(final Object object, final Consumer<V> cleanup, final V value) {
+  public static <V> void registerCleanup(final Object object, final Consumer<V> cleanup,
+      final V value) {
     CleanupDaemon.registerCleanup(object, cleanup, value);
   }
 
@@ -183,5 +187,76 @@ public interface Cleanup {
           CleanupDaemon.handle(e);
         }
     }, resources);
+  }
+
+  /**
+   * Alternative to {@link Runtime#runFinalizersOnExit(boolean)}. This simply sets the used thread
+   * to be a daemon or a user thread. By default no cleanup actions are run on exit.
+   * 
+   * @param value
+   *          true to enable cleanup on exit, false to disable
+   * @see Thread#setDaemon(boolean)
+   */
+  public static void runCleanupOnExit(boolean value) {
+    CleanupDaemon.THREAD.setDaemon(!value);
+  }
+
+  /**
+   * Changes the priority of the cleanup thread.
+   * 
+   * @param newPriority
+   *          priority to set thread to
+   * @see Thread#setPriority(int)
+   * @throws IllegalArgumentException
+   *           If the priority is not in the range <code>MIN_PRIORITY</code> to
+   *           <code>MAX_PRIORITY</code>.
+   * @throws SecurityException
+   *           if the current thread cannot modify this thread.
+   * @see Thread#MAX_PRIORITY
+   * @see Thread#MIN_PRIORITY
+   */
+  public static void setCleanupPriority(int newPriority) {
+    CleanupDaemon.THREAD.setPriority(newPriority);
+  }
+
+  /**
+   * Runs the pending cleanup actions. Calling this method suggests that the Java virtual machine
+   * expend effort toward running the <code>cleanup</code> actions of objects that have been
+   * discarded. When control returns from the method call, the virtual machine has made a best
+   * effort to complete all outstanding cleanup action.
+   * <p>
+   * The virtual machine performs the cleanup process automatically as needed, if the
+   * <code>runCleanup</code> method is not invoked explicitly.
+   * <p>
+   * This does not invoke <code>System.gc();</code> and therefore only blocks until all objects are
+   * handled that were already discarded.
+   * 
+   * @see Runtime#runFinalization()
+   */
+  public static void runCleanup() throws InterruptedException {
+    synchronized (Cleanup.class) {
+      final int prio = CleanupDaemon.THREAD.getPriority();
+      try {
+        final ReferenceQueue<?> q = CleanupDaemon.getQueue();
+        // "queueLength" is not volatile and therefore not always seen.
+        // "head" is volatile and is null if queue is empty.
+        final Field field = ReferenceQueue.class.getDeclaredField("head");
+        field.setAccessible(true);
+        if(null != field.get(q)) {
+          CleanupDaemon.THREAD.setPriority(Thread.MAX_PRIORITY);
+          Thread.yield(); 
+        }
+        // Check if there are more:
+        while (null != field.get(q)) 
+          Thread.sleep(100); 
+        Thread.yield(); // cleanup might still run!
+      } catch (NoSuchFieldException | SecurityException | NullPointerException
+          | IllegalArgumentException | IllegalAccessException e) {
+        // ignore.
+        e.printStackTrace();
+      } finally {
+        CleanupDaemon.THREAD.setPriority(prio);
+      }
+    }
   }
 }
