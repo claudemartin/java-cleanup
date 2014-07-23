@@ -114,9 +114,10 @@ final class CleanupDaemon implements Runnable {
     }
   }
 
-  static synchronized void runCleanupOnExit(final boolean value) {
+  /** @see Cleanup#runCleanupOnExit(boolean) */
+  synchronized static void runCleanupOnExit(final boolean value) {
     runOnExit = true;
-    if (value && hook == null) {
+    if (value && hook == null)
       hook = new Thread(() -> {
         if (!runOnExit)
           return;
@@ -126,11 +127,11 @@ final class CleanupDaemon implements Runnable {
           // Can't handle now. System is already shutting down.
         }
       }, "Shutdown Hook for Cleanup");
+    
+    if (value)
       Runtime.getRuntime().addShutdownHook(hook);
-    }
-    if (!value && hook != null) {
+    else if (hook != null)
       Runtime.getRuntime().removeShutdownHook(hook);
-    }
   }
 
   synchronized static void runCleanup() throws InterruptedException {
