@@ -39,6 +39,8 @@ import java.util.function.Consumer;
  * <li>Less risk of {@link OutOfMemoryError} during GC.</li>
  * <li>Very obvious mistakes in usage are detected.</li>
  * <li>Exceptions can be handled by registered exception handlers.</li>
+ * <li>{@link Cleanup#runCleanupOnExit(boolean)} is available, 
+ *      while {@link Runtime#runFinalizersOnExit(boolean)} is deprecated.</li>
  * </ul>
  * </td>
  * <td class="con">
@@ -255,8 +257,9 @@ public interface Cleanup {
           | IllegalArgumentException | IllegalAccessException e) {
         // ignore.
         e.printStackTrace();
-      } finally {
-        CleanupDaemon.THREAD.setPriority(prio);
+      } finally { 
+        if(CleanupDaemon.THREAD.getPriority() == Thread.MAX_PRIORITY)
+          CleanupDaemon.THREAD.setPriority(prio);
       }
     }
   }
