@@ -203,6 +203,7 @@ public interface Cleanup {
 
   /**
    * Changes the priority of the cleanup thread.
+   * Default is {@link Thread#MIN_PRIORITY}.
    * 
    * @param newPriority
    *          priority to set thread to
