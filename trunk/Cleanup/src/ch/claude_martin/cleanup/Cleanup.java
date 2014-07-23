@@ -80,11 +80,13 @@ public interface Cleanup {
    * daemon-thread used to perform cleanup. All added handlers are executed until one throws an
    * unchecked exception.
    * <p>
+   * It is recommended that you use this for logging, to be able to find problems in the cleanup
+   * actions.
+   * <p>
    * Note that even {@link InterruptedException} is handled. In that case it is recommend to call
    * {@link Thread#interrupt()} to interrupt the thread again.
    * <p>
-   * It is recommended that you use this for logging, to be able to find problems in the cleanup
-   * action.
+   * Exceptions thrown by exception handlers are lost. Make sure that does not happen.
    */
   public static void addExceptionHandler(final Consumer<Throwable> handler) {
     CleanupDaemon.addExceptionHandler(handler);
@@ -192,15 +194,14 @@ public interface Cleanup {
   }
 
   /**
-   * Alternative to {@link Runtime#runFinalizersOnExit(boolean)}. This simply sets the used thread
-   * to be a daemon or a user thread. By default no cleanup actions are run on exit.
-   * 
+   * Runs cleanup code by the use of {@link Runtime#addShutdownHook(Thread)}. 
+   * This is an alternative to the deprecated {@link Runtime#runFinalizersOnExit(boolean)}.
    * @param value
    *          true to enable cleanup on exit, false to disable
    * @see Thread#setDaemon(boolean)
    */
   public static void runCleanupOnExit(boolean value) {
-    CleanupDaemon.THREAD.setDaemon(!value);
+    CleanupDaemon.runCleanupOnExit(value);
   }
 
   /**
@@ -237,30 +238,6 @@ public interface Cleanup {
    * @see Runtime#runFinalization()
    */
   public static void runCleanup() throws InterruptedException {
-    synchronized (Cleanup.class) {
-      final int prio = CleanupDaemon.THREAD.getPriority();
-      try {
-        final ReferenceQueue<?> q = CleanupDaemon.getQueue();
-        // "queueLength" is not volatile and therefore not always seen.
-        // "head" is volatile and is null if queue is empty.
-        final Field field = ReferenceQueue.class.getDeclaredField("head");
-        field.setAccessible(true);
-        if(null != field.get(q)) {
-          CleanupDaemon.THREAD.setPriority(Thread.MAX_PRIORITY);
-          Thread.yield(); 
-        }
-        // Check if there are more:
-        while (null != field.get(q)) 
-          Thread.sleep(100); 
-        Thread.yield(); // cleanup might still run!
-      } catch (NoSuchFieldException | SecurityException | NullPointerException
-          | IllegalArgumentException | IllegalAccessException e) {
-        // ignore.
-        e.printStackTrace();
-      } finally { 
-        if(CleanupDaemon.THREAD.getPriority() == Thread.MAX_PRIORITY)
-          CleanupDaemon.THREAD.setPriority(prio);
-      }
-    }
+    CleanupDaemon.runCleanup();
   }
 }
