@@ -5,6 +5,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -33,6 +34,10 @@ final class CleanupDaemon implements Runnable {
   private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
       new AtomicReference<>(t -> {});
 
+  private static volatile boolean runOnExit = false;
+  private static volatile Thread hook = null;
+  
+  
   /** @see Cleanup#addExceptionHandler(Consumer) */
   static void addExceptionHandler(final Consumer<Throwable> handler) {
     EXCEPTION_HANDLER.getAndAccumulate(handler, Consumer::andThen);
@@ -45,7 +50,12 @@ final class CleanupDaemon implements Runnable {
 
   /** Handle any exception by all registered handlers. */
   static void handle(final Throwable t) {
-    EXCEPTION_HANDLER.get().accept(t);
+    try {
+      EXCEPTION_HANDLER.get().accept(t);
+    } catch(Throwable t2) {
+      // We already tried to handle an exception.
+      // This one is lost.
+    }
   }
 
   /** @see Cleanup#registerCleanup(Consumer, Object) */
@@ -102,6 +112,52 @@ final class CleanupDaemon implements Runnable {
         handle(e);
       }
     }
+  }
+
+  static synchronized void runCleanupOnExit(final boolean value) {
+    runOnExit = true;
+    if (value && hook == null) {
+      hook = new Thread(() -> {
+        if (!runOnExit)
+          return;
+        try {
+          runCleanup();
+        } catch (Throwable e) {
+          // Can't handle now. System is already shutting down.
+        }
+      }, "Shutdown Hook for Cleanup");
+      Runtime.getRuntime().addShutdownHook(hook);
+    }
+    if (!value && hook != null) {
+      Runtime.getRuntime().removeShutdownHook(hook);
+    }
+  }
+
+  synchronized static void runCleanup() throws InterruptedException {
+      final int prio = THREAD.getPriority();
+      try {
+        final ReferenceQueue<?> q = getQueue();
+        // "queueLength" is not volatile and therefore not always seen.
+        // "head" is volatile and is null if queue is empty.
+        final Field field = ReferenceQueue.class.getDeclaredField("head");
+        field.setAccessible(true);
+        if(null != field.get(q)) {
+          THREAD.setPriority(Thread.MAX_PRIORITY);
+          Thread.yield(); 
+        }
+        // Check if there are more:
+        while (null != field.get(q)) 
+          Thread.sleep(100); 
+        Thread.yield(); // cleanup might still run!
+      } catch (NoSuchFieldException | SecurityException | NullPointerException
+          | IllegalArgumentException | IllegalAccessException e) {
+        // Maybe "head" does not exist -> plan b:
+        THREAD.setPriority(Thread.MAX_PRIORITY);
+        Thread.yield(); 
+      } finally { 
+        if(THREAD.getPriority() == Thread.MAX_PRIORITY)
+          THREAD.setPriority(prio);
+      }
   }
 
 }

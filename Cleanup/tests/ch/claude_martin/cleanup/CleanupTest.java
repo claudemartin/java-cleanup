@@ -220,5 +220,10 @@ public class CleanupTest {
     Cleanup.runCleanup();
     assertEquals(1000, ai.get());
   }
+  @Test
+  @Ignore // Can't be tested by JUnit
+  public void testRunCleanupOnExit() throws Exception {
+    Cleanup.runCleanupOnExit(true);
+  }
   
 }
