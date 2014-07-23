@@ -2,10 +2,7 @@ package ch.claude_martin.cleanup;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.synchronizedList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +17,7 @@ import java.util.logging.Level;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -211,4 +209,16 @@ public class CleanupTest {
       super(message);
     }
   }
+  
+  @Test
+  @Ignore // This is not deterministic by nature!
+  public void testRunCleanup() throws Exception {
+    final AtomicInteger ai = new AtomicInteger(0);
+    for (int i = 0; i < 1000; i++)
+      new Cleanup() { }.registerCleanup(ai::getAndIncrement);
+    System.gc();
+    Cleanup.runCleanup();
+    assertEquals(1000, ai.get());
+  }
+  
 }
