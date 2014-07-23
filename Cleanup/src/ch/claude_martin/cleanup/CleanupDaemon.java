@@ -25,15 +25,13 @@ final class CleanupDaemon implements Runnable {
    * The consumer can be {@link Consumer#andThen(Consumer) linked} to more consumers/handlers.
    * 
    * <p>
-   * {@link InterruptedException}: thrown when the {@link #THREAD thread} is interrupted. The thread
-   * will continue, unless this handler throws a {@link RuntimeException}.
-   * <p>
-   * {@link RuntimeException}: thrown when the cleanup action throws it.
+   * Note that {@link InterruptedException} is ignored and the thread will continue.
    * 
    */
   private final static AtomicReference<Consumer<Throwable>> EXCEPTION_HANDLER = //
       new AtomicReference<>(t -> {});
 
+  private static volatile boolean running = true;
   private static volatile boolean runOnExit = false;
   private static volatile Thread hook = null;
   
@@ -99,15 +97,25 @@ final class CleanupDaemon implements Runnable {
 
   @Override
   public void run() {
-    while (true) {
+    while (running) {
+      final Reference<?> ref;
       try {
-        final Reference<?> ref = QUEUE.remove();
-        if (ref instanceof CleanupPhantomRef) {
-          synchronized (REFS) {
-            REFS.remove(ref);
-            ((CleanupPhantomRef<?, ?>) ref).runCleanup();
-          }
-        }
+        ref = QUEUE.remove();
+      } catch (InterruptedException e) {
+        // This should only happen on shutdown.
+        // See runCleanupOnExit(). 
+        continue; // ... to check "running".
+      }
+      if (ref instanceof CleanupPhantomRef)
+        cleanupReference((CleanupPhantomRef<?, ?>) ref);
+    }
+  }
+  
+  static void cleanupReference(final CleanupPhantomRef<?, ?> ref) {
+    synchronized (REFS) {
+      REFS.remove(ref);
+      try {
+        ((CleanupPhantomRef<?, ?>) ref).runCleanup();
       } catch (final Throwable e) {
         handle(e);
       }
@@ -122,7 +130,18 @@ final class CleanupDaemon implements Runnable {
         if (!runOnExit)
           return;
         try {
-          runCleanup();
+          running = false; 
+          THREAD.interrupt();
+          for (int i = 0; i < 10; i++) {
+            // Cleanup is only possible for discarded objects!
+            System.gc(); 
+            Thread.sleep(100); // One second for GC.
+            System.runFinalization();
+          }
+          Reference<?> ref;
+          while (null != (ref = QUEUE.poll()))
+            if (ref instanceof CleanupPhantomRef)
+              cleanupReference((CleanupPhantomRef<?, ?>) ref);
         } catch (Throwable e) {
           // Can't handle now. System is already shutting down.
         }
@@ -134,31 +153,14 @@ final class CleanupDaemon implements Runnable {
       Runtime.getRuntime().removeShutdownHook(hook);
   }
 
-  synchronized static void runCleanup() throws InterruptedException {
-      final int prio = THREAD.getPriority();
-      try {
-        final ReferenceQueue<?> q = getQueue();
-        // "queueLength" is not volatile and therefore not always seen.
-        // "head" is volatile and is null if queue is empty.
-        final Field field = ReferenceQueue.class.getDeclaredField("head");
-        field.setAccessible(true);
-        if(null != field.get(q)) {
-          THREAD.setPriority(Thread.MAX_PRIORITY);
-          Thread.yield(); 
-        }
-        // Check if there are more:
-        while (null != field.get(q)) 
-          Thread.sleep(100); 
-        Thread.yield(); // cleanup might still run!
-      } catch (NoSuchFieldException | SecurityException | NullPointerException
-          | IllegalArgumentException | IllegalAccessException e) {
-        // Maybe "head" does not exist -> plan b:
-        THREAD.setPriority(Thread.MAX_PRIORITY);
-        Thread.yield(); 
-      } finally { 
-        if(THREAD.getPriority() == Thread.MAX_PRIORITY)
-          THREAD.setPriority(prio);
-      }
+  /** @see Cleanup#runCleanup() */
+  synchronized static void runCleanup() {
+    Reference<?> ref = QUEUE.poll();
+    while (ref != null) {
+      if (ref instanceof CleanupPhantomRef)
+        cleanupReference((CleanupPhantomRef<?, ?>) ref);
+      ref = QUEUE.poll();
+    }
   }
 
 }
