@@ -3,6 +3,8 @@ package ch.claude_martin.cleanup;
 import static java.util.Arrays.asList;
 import static java.util.Collections.synchronizedList;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 
+
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -26,15 +31,28 @@ import org.junit.Test;
  */
 @SuppressWarnings("static-method")
 public class CleanupTest {
+  
+  static volatile Throwable exception = null;
   @BeforeClass
-  public static void before() {
+  public static void beforeClass() {
     Example.logger.setLevel(Level.OFF);
     CleanupDaemon.THREAD.setPriority(Thread.NORM_PRIORITY+1); // only while testing
     CleanupDaemon.addExceptionHandler((ex) -> {
       if(ex instanceof TestException)
         return; // see testExceptionHandler()
+      exception = ex;
       fail("Exception: " + ex);
     });
+  }
+  
+  @Before
+  public void before() {
+    exception = null;
+  }
+  @After
+  public void after() throws Throwable {
+    if(exception != null)
+      throw exception;
   }
 
   /** "cleanupable" is now a word. */
@@ -140,7 +158,7 @@ public class CleanupTest {
       thread.setName("testMany");
       thread.setUncaughtExceptionHandler((t, ex) -> {
         result.set(false);
-        fail("testMany: " + ex);
+        exception = ex;
       });
       return thread;
     });
@@ -183,9 +201,9 @@ public class CleanupTest {
 
   @Test
   public final void testExceptionHandler() throws Exception {
-    final List<String> refs = synchronizedList(new ArrayList<>());
-    final String message = "test";
     {
+      final List<String> refs = synchronizedList(new ArrayList<>());
+      final String message = "test";
       MyCleanupable test = new MyCleanupable();
       final Consumer<Throwable> c = (t) -> {
         refs.add(t.getMessage());
@@ -197,9 +215,25 @@ public class CleanupTest {
         throw new TestException(message);
       }, 42);
       test = null;
+      gc();
+      assertEquals(asList(message, message, message), refs);
     }
-    gc();
-    assertEquals(asList(message, message, message), refs);
+    
+    {
+      AtomicInteger i = new AtomicInteger(0);
+      for (int j = 0; j < 10; j++) {
+        Cleanup.addExceptionHandler((e) -> {
+          i.getAndIncrement();
+          throw new NullPointerException();
+        });
+      }
+      new MyCleanupable().registerCleanup((v) -> {
+        throw new TestException("test");
+      }, 42);
+      gc();
+      // First increments, others are not invoked:
+      assertEquals(1, i.get());
+    }
   }
   
   /** Used to test Exceptions in {@link #testExceptionHandler()}. */
@@ -211,19 +245,37 @@ public class CleanupTest {
   }
   
   @Test
-  @Ignore // This is not deterministic by nature!
   public void testRunCleanup() throws Exception {
+    final int n = 20;
     final AtomicInteger ai = new AtomicInteger(0);
-    for (int i = 0; i < 1000; i++)
-      new Cleanup() { }.registerCleanup(ai::getAndIncrement);
-    System.gc();
+    
+    for (int i = 0; i < n; i++)
+      new Cleanup() { }.registerCleanup(() -> {
+        try {
+          Thread.sleep(50);
+        } catch (Exception e) {
+          exception = e;
+        } finally {
+          ai.getAndIncrement();
+        }
+      });
+    gc();
+    assumeTrue(ai.get()<n);
     Cleanup.runCleanup();
-    assertEquals(1000, ai.get());
+    // There's a chance that one is still processing.
+    if(ai.get()<n)
+      Thread.sleep(100);
+    assertEquals(n, ai.get());
   }
+  
   @Test
-  @Ignore // Can't be tested by JUnit
+  @Ignore // Can't be tested by JUnit.
   public void testRunCleanupOnExit() throws Exception {
+    // unignore and run this single test:
     Cleanup.runCleanupOnExit(true);
+    new Cleanup() { }.registerCleanup(() -> {
+        System.out.println("runCleanupOnExit works fine!");
+    });
   }
   
 }

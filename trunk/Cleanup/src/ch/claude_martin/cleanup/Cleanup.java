@@ -78,15 +78,11 @@ public interface Cleanup {
   /**
    * Adds a handler for Exceptions thrown during cleanup. This includes all exceptions thrown in the
    * daemon-thread used to perform cleanup. All added handlers are executed until one throws an
-   * unchecked exception.
+   * unchecked exception. Unchecked exceptions thrown by exception handlers are lost and they
+   * prevent other handlers to run. Make sure that does not happen.
    * <p>
    * It is recommended that you use this for logging, to be able to find problems in the cleanup
    * actions.
-   * <p>
-   * Note that even {@link InterruptedException} is handled. In that case it is recommend to call
-   * {@link Thread#interrupt()} to interrupt the thread again.
-   * <p>
-   * Exceptions thrown by exception handlers are lost. Make sure that does not happen.
    */
   public static void addExceptionHandler(final Consumer<Throwable> handler) {
     CleanupDaemon.addExceptionHandler(handler);
@@ -224,20 +220,17 @@ public interface Cleanup {
   }
 
   /**
-   * Runs the pending cleanup actions. Calling this method suggests that the Java virtual machine
-   * expend effort toward running the <code>cleanup</code> actions of objects that have been
-   * discarded. When control returns from the method call, the virtual machine has made a best
-   * effort to complete all outstanding cleanup action.
+   * Runs the pending cleanup actions.
    * <p>
-   * The virtual machine performs the cleanup process automatically as needed, if the
-   * <code>runCleanup</code> method is not invoked explicitly.
+   * Cleanup actions are processed automatically as needed, if the <code>runCleanup</code> method is
+   * not invoked explicitly.
    * <p>
    * This does not invoke <code>System.gc();</code> and therefore only blocks until all objects are
    * handled that were already discarded.
    * 
    * @see Runtime#runFinalization()
    */
-  public static void runCleanup() throws InterruptedException {
+  public static void runCleanup() {
     CleanupDaemon.runCleanup();
   }
 }
