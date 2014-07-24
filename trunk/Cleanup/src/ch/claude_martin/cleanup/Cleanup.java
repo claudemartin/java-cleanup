@@ -1,9 +1,6 @@
 package ch.claude_martin.cleanup;
 
 import java.lang.ref.PhantomReference;
-import java.lang.ref.ReferenceQueue;
-import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
 
@@ -40,7 +37,7 @@ import java.util.function.Consumer;
  * <li>Very obvious mistakes in usage are detected.</li>
  * <li>Exceptions can be handled by registered exception handlers.</li>
  * <li>{@link Cleanup#runCleanupOnExit(boolean)} is available, 
- *      while {@link Runtime#runFinalizersOnExit(boolean)} is deprecated.</li>
+ *     while {@link Runtime#runFinalizersOnExit(boolean)} is deprecated.*</li>
  * </ul>
  * </td>
  * <td class="con">
@@ -58,6 +55,10 @@ import java.util.function.Consumer;
  * </td>
  * </tr>
  * </table>
+ * 
+ * <p>
+ * * Cleanup actions are always only run for discarded objects. You should use
+ * {@link Runtime#addShutdownHook(Thread)} for all code that must run on shutdown.
  * 
  * <p>
  * A note from the author:<br>
@@ -136,13 +137,17 @@ public interface Cleanup {
   }
 
   /**
-   * Easy registration of auto-closeable resources.
+   * Easy registration of {@link AutoCloseable auto-closeable} resources.
    * <p>
    * The resources are closed as they are listed, from first to last. Therefore you should list them
    * in the <em>opposite</em> order of their creation.
    * 
    * @param resources
    *          auto-closeable resources.
+   * @throws NullPointerException
+   *           if null is passed as a resource
+   * @throws IllegalArgumentException
+   *           if this is passed as a resource
    */
   public default void registerAutoClose(final AutoCloseable... resources) {
     registerAutoClose(this, resources);
@@ -167,18 +172,28 @@ public interface Cleanup {
   }
 
   /**
-   * Register any object and its resources for cleanup. See the non-static method for more
-   * information.
+   * Register any object and its resources for cleanup. See the
+   * {@link #registerAutoClose(AutoCloseable...) non-static method} for more information.
    * 
    * @see #registerAutoClose(AutoCloseable...)
    * @param object
    *          object for which a {@link PhantomReference} will be created
    * @param resources
    *          auto-closeable resources.
+   * @throws NullPointerException
+   *           if null is passed as a resource
+   * @throws IllegalArgumentException
+   *           if any resource is the object
    */
   public static void registerAutoClose(final Object object, final AutoCloseable... resources) {
-    if (resources == null || Arrays.asList(resources).contains(null))
-      throw new NullPointerException("values");
+    if (resources == null)
+      throw new NullPointerException("resources");
+    for (final AutoCloseable a : resources)
+      if (null == a)
+        throw new NullPointerException("resources");
+      else if (object == a)
+        throw new IllegalArgumentException("not allowed: object.registerAutoClose(object)");
+    
     registerCleanup(object, res -> {
       for (final AutoCloseable a : res)
         try {
@@ -190,8 +205,13 @@ public interface Cleanup {
   }
 
   /**
-   * Runs cleanup code by the use of {@link Runtime#addShutdownHook(Thread)}. 
-   * This is an alternative to the deprecated {@link Runtime#runFinalizersOnExit(boolean)}.
+   * Runs cleanup code by the use of {@link Runtime#addShutdownHook(Thread)}. This is an alternative
+   * to the deprecated {@link Runtime#runFinalizersOnExit(boolean)}. But note that only cleanup
+   * actions of discarded objects are run. For objects that live until shutdown the action needs to
+   * be registered by {@link Runtime#addShutdownHook(Thread)} additionally. Such an action will run
+   * when the object might still be in use by any threads. Cleanup actions, on the other hand, are
+   * designed to run for discarded objects only.
+   * 
    * @param value
    *          true to enable cleanup on exit, false to disable
    * @see Thread#setDaemon(boolean)
