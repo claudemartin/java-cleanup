@@ -115,7 +115,7 @@ final class CleanupDaemon implements Runnable {
     synchronized (REFS) {
       REFS.remove(ref);
       try {
-        ((CleanupPhantomRef<?, ?>) ref).runCleanup();
+        ref.runCleanup();
       } catch (final Throwable e) {
         handle(e);
       }
@@ -130,23 +130,27 @@ final class CleanupDaemon implements Runnable {
         if (!runOnExit)
           return;
         try {
-          running = false; 
+          running = false;
           THREAD.interrupt();
           for (int i = 0; i < 10; i++) {
-            // Cleanup is only possible for discarded objects!
-            System.gc(); 
-            Thread.sleep(100); // One second for GC.
-            System.runFinalization();
+            if (REFS.isEmpty())
+              break;
+            for (int j = 0; j < 10; j++) {
+              // Cleanup is only possible for discarded objects!
+              System.gc();
+              Thread.sleep(100); // Some time for GC.
+              System.runFinalization();
+            }
+            Reference<?> ref;
+            while (null != (ref = QUEUE.poll()))
+              if (ref instanceof CleanupPhantomRef)
+                cleanupReference((CleanupPhantomRef<?, ?>) ref);
           }
-          Reference<?> ref;
-          while (null != (ref = QUEUE.poll()))
-            if (ref instanceof CleanupPhantomRef)
-              cleanupReference((CleanupPhantomRef<?, ?>) ref);
         } catch (Throwable e) {
           // Can't handle now. System is already shutting down.
         }
       }, "Shutdown Hook for Cleanup");
-    
+
     if (value)
       Runtime.getRuntime().addShutdownHook(hook);
     else if (hook != null)
@@ -155,12 +159,10 @@ final class CleanupDaemon implements Runnable {
 
   /** @see Cleanup#runCleanup() */
   synchronized static void runCleanup() {
-    Reference<?> ref = QUEUE.poll();
-    while (ref != null) {
+    Reference<?> ref;
+    while (null != (ref = QUEUE.poll()))
       if (ref instanceof CleanupPhantomRef)
         cleanupReference((CleanupPhantomRef<?, ?>) ref);
-      ref = QUEUE.poll();
-    }
   }
 
 }
