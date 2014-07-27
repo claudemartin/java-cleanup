@@ -38,6 +38,7 @@ final class CleanupDaemon implements Runnable {
   
   /** @see Cleanup#addExceptionHandler(Consumer) */
   static void addExceptionHandler(final Consumer<Throwable> handler) {
+    requireNonNull(handler, "handler");
     EXCEPTION_HANDLER.getAndAccumulate(handler, Consumer::andThen);
   }
 
