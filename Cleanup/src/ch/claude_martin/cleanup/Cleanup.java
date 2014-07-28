@@ -1,5 +1,7 @@
 package ch.claude_martin.cleanup;
 
+import static java.util.Objects.requireNonNull;
+
 import java.lang.ref.PhantomReference;
 import java.util.concurrent.locks.Lock;
 import java.util.function.Consumer;
@@ -141,6 +143,11 @@ public interface Cleanup {
    * <p>
    * The resources are closed as they are listed, from first to last. Therefore you should list them
    * in the <em>opposite</em> order of their creation.
+   * <p>
+   * The documentation of {@link AutoCloseable#close()} states that it is not required to be
+   * idempotent. But for a cleanup action it is recommended to always use resources with an
+   * idempotent close method (cf. {@link java.sql.Connection#close()},
+   * {@link java.io.Closeable#close()}).
    * 
    * @param resources
    *          auto-closeable resources.
@@ -186,12 +193,10 @@ public interface Cleanup {
    *           if any resource is the object
    */
   public static void registerAutoClose(final Object object, final AutoCloseable... resources) {
-    if (resources == null)
-      throw new NullPointerException("resources");
+    requireNonNull(object, "object");
+    requireNonNull(resources, "resources");
     for (final AutoCloseable a : resources)
-      if (null == a)
-        throw new NullPointerException("resources");
-      else if (object == a)
+      if (object == requireNonNull(a, "resources"))
         throw new IllegalArgumentException("not allowed: object.registerAutoClose(object)");
     
     registerCleanup(object, res -> {
