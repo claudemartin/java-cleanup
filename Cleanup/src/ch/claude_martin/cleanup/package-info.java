@@ -1,17 +1,16 @@
 /**
  * This package contains the interface {@link ch.claude_martin.cleanup.Cleanup}, which makes it 
- * easy to register an action to clean up after some object has been removes by garbage collection.
+ * easy to register an action to clean up after some object has been removed by garbage collection.
  * It solves some problems that are common with finalizer blocks, but it has it's own pitfalls.
  * <p>Note that this can only be used with Java 8 or newer. Older versions of Java do not allow 
  * lambdas and there use of a "Finalizer Guardian" is probably more convenient.
  * 
  * <p>
  * Projekt Home: 
- * <a href="https://code.google.com/p/java-cleanup/">https://code.google.com/p/java-cleanup/</a>
- * |
- * <a href="http://claude-martin.ch/java-cleanup/">http://claude-martin.ch/java-cleanup/</a>
+ * <a href="https://github.com/claudemartin/java-cleanup">github.com/claudemartin/java-cleanup</a> | <a 
+ * href="http://claude-martin.ch/java-cleanup/">claude-martin.ch/java-cleanup/</a>
  * 
- * <p>I provide this code as is, with no guarantees. The MIT license follows: 
+ * <p>I, Claude Martin, provide this code as is, with no guarantees. The MIT license follows: 
  * 
  * <p>
  * The MIT License (MIT)
