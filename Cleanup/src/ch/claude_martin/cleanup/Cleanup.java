@@ -86,6 +86,10 @@ public interface Cleanup {
    * <p>
    * It is recommended that you use this for logging, to be able to find problems in the cleanup
    * actions.
+   * 
+   * @param handler
+   *          a handler for all cleanup exceptions.
+   * 
    */
   public static void addExceptionHandler(final Consumer<Throwable> handler) {
     CleanupDaemon.addExceptionHandler(handler);
@@ -107,6 +111,8 @@ public interface Cleanup {
    * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup actions use different
    * values. So you might want to use some {@link Lock} to ensure visibility.
    * 
+   * @param <V>
+   *          generic type of the value
    * @param cleanup
    *          A consumer that defines the cleanup action
    * @param value
@@ -165,6 +171,8 @@ public interface Cleanup {
    * Register any object and a value for cleanup. See the non-static method for more information.
    * 
    * @see #registerCleanup(Consumer, Object)
+   * @param <V>
+   *          generic type of the value
    * @param object
    *          object for which a {@link PhantomReference} will be created
    * @param cleanup
