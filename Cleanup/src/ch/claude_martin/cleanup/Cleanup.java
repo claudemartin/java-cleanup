@@ -11,12 +11,12 @@ import java.util.function.Consumer;
  * This is an interface to add cleanup actions to any type. The method
  * {@link #registerCleanup(Consumer, Object)} must be run at the end of or after construction (code
  * run after that could invalidate the object, which could lead to problems). The configured
- * <i>cleanup</i> action is run when <code>this</code> does not exist anymore. Therefore the
- * <i>value</i> must not contain any references to <code>this</code>.
+ * <i>cleanup</i> action is run when <tt>this</tt> does not exist anymore. Therefore the
+ * <i>value</i> must not contain any references to <tt>this</tt>.
  * <p>
  * You can use {@link #addExceptionHandler(Consumer)} to handle exceptions (e.g. send exceptions to
  * your logging system).
- * <p>
+ * <p><!-- @formatter:off -->
  * <style type="text/css"> 
  *   table { width: 100%; } 
  *   td.pro { width: 40%; } 
@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  *   ul.pro li::before { content: "+"; } 
  *   ul.con li::before { content: "—"; } 
  * </style>
- * 
+ * <!-- @formatter:on -->
  * Pros and Cons and Pitfalls:
  * <table summary="List of pros and cons of this code.">
  * <tr align="left" valign="top">
@@ -38,13 +38,13 @@ import java.util.function.Consumer;
  * <li>Less risk of {@link OutOfMemoryError} during GC.</li>
  * <li>Very obvious mistakes in usage are detected.</li>
  * <li>Exceptions can be handled by registered exception handlers.</li>
- * <li>{@link Cleanup#runCleanupOnExit(boolean)} is available, 
- *     while {@link Runtime#runFinalizersOnExit(boolean)} is deprecated.*</li>
+ * <li>{@link Cleanup#runCleanupOnExit(boolean)} is available, while
+ * {@link Runtime#runFinalizersOnExit(boolean)} is deprecated.*</li>
  * </ul>
  * </td>
  * <td class="con">
  * <ul class="con">
- * <li>Does not work if you leak a reference to <code>this</code> to the cleanup action. References
+ * <li>Does not work if you leak a reference to <tt>this</tt> to the cleanup action. References
  * are often implicit and not visible in the code. Many of such mistakes can not be detected and the
  * object is never garbage collected (memory leak).</li>
  * <li>No guarantee that the code runs when the JVM exits.</li>
@@ -92,31 +92,32 @@ public interface Cleanup {
   }
 
   /**
-   * Register method to <i>clean up</i> after garbage collection removed this.
+   * Register method to <i>clean up</i> after garbage collection removed <tt>this</tt>.
    * <p>
    * The value is any data structure that holds everything you need for the cleanup. <br>
    * Examples: Database connection to be closed. Stream to be closed. ID to be logged. etc. <br>
-   * But it must not hold any references to <i>this</i>. Note that instances of inner / anonymous
+   * But it must not hold any references to <tt>this</tt>. Note that instances of inner / anonymous
    * classes also hold implicit references to the outer instance. However, you can reference fields
    * directly in the lambda, instead of using value, as long as the objects do not reference
    * <tt>this</tt>.
    * <p>
-   * This can be called multiple times and each time a new {@link PhantomReference} will be created.
+   * Multiple actions can be registered and each time a new {@link PhantomReference} will be
+   * created.
    * <p>
-   * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup actions use different values.
-   * So you might want to use some {@link Lock} to ensure visibility.
+   * Cleanup is synchronized on it's <i>value</i>, but multiple cleanup actions use different
+   * values. So you might want to use some {@link Lock} to ensure visibility.
    * 
    * @param cleanup
    *          A consumer that defines the cleanup action
    * @param value
-   *          All data needed for cleanup, or null
+   *          All data needed for cleanup, or <tt>null</tt>
    * @throws IllegalArgumentException
-   *           thrown if value is obviously holding a reference to <i>this</i>
+   *           thrown if <i>value</i> is obviously holding a reference to <tt>this</tt>
    */
   public default <V> void registerCleanup(final Consumer<V> cleanup, final V value) {
     CleanupDaemon.registerCleanup(this, cleanup, value);
   }
-  
+
   /**
    * Convenience method for cleanup actions that does not need any value.
    * <p>
@@ -152,9 +153,9 @@ public interface Cleanup {
    * @param resources
    *          auto-closeable resources.
    * @throws NullPointerException
-   *           if null is passed as a resource
+   *           if <tt>null</tt> is passed as a resource
    * @throws IllegalArgumentException
-   *           if this is passed as a resource
+   *           if <tt>this</tt> is passed as a resource
    */
   public default void registerAutoClose(final AutoCloseable... resources) {
     registerAutoClose(this, resources);
@@ -167,11 +168,11 @@ public interface Cleanup {
    * @param object
    *          object for which a {@link PhantomReference} will be created
    * @param cleanup
-   *          A consumer to clean up the value
+   *          A consumer to clean up the <i>value</i>
    * @param value
-   *          All data needed for cleanup
+   *          All data needed for cleanup, or <tt>null</tt>
    * @throws IllegalArgumentException
-   *           thrown if value is obviously holding a reference to <i>this</i>
+   *           thrown if <i>value</i> is obviously holding a reference to <tt>this</tt>
    */
   public static <V> void registerCleanup(final Object object, final Consumer<V> cleanup,
       final V value) {
@@ -188,7 +189,7 @@ public interface Cleanup {
    * @param resources
    *          auto-closeable resources.
    * @throws NullPointerException
-   *           if null is passed as a resource
+   *           if <tt>null</tt> is passed as the object or a resource
    * @throws IllegalArgumentException
    *           if any resource is the object
    */
@@ -198,7 +199,7 @@ public interface Cleanup {
     for (final AutoCloseable a : resources)
       if (object == requireNonNull(a, "resources"))
         throw new IllegalArgumentException("not allowed: object.registerAutoClose(object)");
-    
+
     registerCleanup(object, res -> {
       for (final AutoCloseable a : res)
         try {
@@ -206,7 +207,7 @@ public interface Cleanup {
         } catch (final Exception e) {
           CleanupDaemon.handle(e);
         }
-    }, resources);
+    } , resources);
   }
 
   /**
@@ -218,37 +219,35 @@ public interface Cleanup {
    * designed to run for discarded objects only.
    * 
    * @param value
-   *          true to enable cleanup on exit, false to disable
+   *          <tt>true</tt> to enable cleanup on exit, <tt>false</tt> to disable
    * @see Thread#setDaemon(boolean)
    */
-  public static void runCleanupOnExit(boolean value) {
+  public static void runCleanupOnExit(final boolean value) {
     CleanupDaemon.runCleanupOnExit(value);
   }
 
   /**
-   * Changes the priority of the cleanup thread.
-   * Default is {@link Thread#MIN_PRIORITY}.
+   * Changes the <i>priority</i> of the cleanup thread. Default is {@link Thread#MIN_PRIORITY}.
    * 
    * @param newPriority
    *          priority to set thread to
    * @see Thread#setPriority(int)
    * @throws IllegalArgumentException
-   *           If the priority is not in the range <code>MIN_PRIORITY</code> to
-   *           <code>MAX_PRIORITY</code>.
+   *           If the priority is not in the range <tt>MIN_PRIORITY</tt> to <tt>MAX_PRIORITY</tt>.
    * @throws SecurityException
-   *           if the current thread cannot modify this thread.
+   *           if the current thread cannot modify the cleanup thread.
    * @see Thread#MAX_PRIORITY
    * @see Thread#MIN_PRIORITY
    */
-  public static void setCleanupPriority(int newPriority) {
+  public static void setCleanupPriority(final int newPriority) {
     CleanupDaemon.THREAD.setPriority(newPriority);
   }
 
   /**
    * Runs the pending cleanup actions.
    * <p>
-   * Cleanup actions are processed automatically as needed, if the <code>runCleanup</code> method is
-   * not invoked explicitly.
+   * Cleanup actions are processed automatically as needed, if the <tt>runCleanup</tt> method is not
+   * invoked explicitly.
    * <p>
    * This does not invoke <code>System.gc();</code> and therefore only blocks until all objects are
    * handled that were already discarded.
