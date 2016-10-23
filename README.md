@@ -1,3 +1,7 @@
+<h3>Defunct: use `Cleaner` instead!</h3>
+
+This was just a little side project. Later I found out that there already is `sun.misc.Cleaner` and we should get `java.util.Cleaner` with Java 9. So use that instead. Maybe this can still be used if you want to learn how to use PhantomReferences, but don't use it in production.
+
 <h3><i>Java's PhantomReferences made easy.</i></h3>
 
 Do you know this situation: You have some java class and you need to cleanup after it was garbage collected? 
